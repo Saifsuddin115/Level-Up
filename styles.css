@@ -1,0 +1,2328 @@
+/* ================================================================
+   LEVEL UP — stylesheet
+   ================================================================
+   Quick map of this file (Ctrl+F "§" to jump to any section):
+
+     §1  Fonts, design tokens & dynamic rank-color bindings
+     §2  Global resets
+     §3  Page layout (body / title / container / inputs)
+     §4  HUD — corner buttons (stats, streak, mute, undo) + empty state
+     §5  HUD — daily quest button
+     §6  HUD — floating log button (FAB)
+     §7  Character profile bar (top-left)
+     §8  Skill log grid (#log)
+     §9  SKILL CARDS — shell & layer system   <- card colors live here
+     §10 SKILL CARDS — content (icon/title/bars/buttons/celebrations)
+     §11 Modals — shared frame (overlay, system-window, buttons)
+     §12 Modal — Log Activity
+     §13 Modal — Daily Quest (list, items, choice screen, pager)
+     §14 Modal — Quest Arrival / Notify (system-message skin)
+     §15 Modal — Growth Chart
+     §16 Modal — Stats & Quick-Add (reuse §11's shared frame)
+     §17 Level-Up celebration (skill level-up + "ARISE" rank-up)
+     §18 Streak celebration (charged bolt + energy field)
+     §19 Flash / lightning accents (screen flash + card-level bolt drop)
+     §20 Avatar & screen effects (charge, impact, shake, time-stop)
+     §21 Training-complete blast
+     §22 Focus Mode — trigger button
+     §23 Focus Mode — setup overlay
+     §24 Focus Mode — break rows
+     §25 Focus Mode — active session (full-page timer)
+     §26 Ambient particles
+     §27 Responsive + reduced motion
+
+   IMPORTANT — read before touching card colors:
+   Skill cards (§9) get their color/tint/glow/metal/shine from 6 CSS
+   variables that JAVASCRIPT sets directly on each card element (see
+   applyCardEvolution() + the CARD_RANKS table in script.js). Inline
+   styles ALWAYS beat anything written here for the same property —
+   so changing a number inside .card{} below will NOT change how an
+   actual card looks once it's rendered. This file only controls the
+   SHAPE of each effect (gradient angle, blend mode, how far a glow
+   spreads). To change the ACTUAL numbers, edit CARD_RANKS in
+   script.js instead.
+
+   Same idea applies to --current-rank-color, --levelup-color and
+   --shadow-color throughout this file: those three are set inline
+   by JS per-rank, and every rule below just reacts to whatever value
+   they currently hold.
+   ================================================================ */
+
+
+/* ================================================================
+   §1. FONTS, DESIGN TOKENS & DYNAMIC RANK-COLOR BINDINGS
+   ================================================================ */
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Rajdhani:wght@400;500;600;700&display=swap');
+
+:root{
+    /* Global palette used everywhere EXCEPT skill-card rank colors
+       (those come from JS — see the note at the top of this file). */
+    --bg: #080b14;
+    --panel: #0d1220;
+    --panel-2: #10182c;
+    --line: #1e2c4d;
+    --line-bright: #3b6bd1;
+    --accent: #4d9fff;
+    --accent-soft: #2a5cad;
+    --cyan: #66ccff;
+    --gold: #ffc857;
+    --violet: #8b6ce8;
+    --violet-soft: #4a3a82;
+    --silver: #c8d3e6;
+    --text: #e8edf7;
+    --text-dim: #7c88a3;
+    --danger: #e35222;
+    --glass: rgba(13,18,32,0.72);
+    --radius: 12px;
+    --radius-sm: 6px;
+
+    --rank-E-color: #6b7590;
+    --rank-D-color: #3b7dd8;
+    --rank-B-color: #7c5cd6;
+    --rank-S-color: #ffcf6b;
+}
+
+body.light-mode{
+    --bg: #eef1f8;
+    --panel: #ffffff;
+    --panel-2: #f4f6fb;
+    --line: #d7deec;
+    --line-bright: #a9bde0;
+    --text: #1b2334;
+    --text-dim: #5b6478;
+    --glass: rgba(255,255,255,0.75);
+}
+body {
+    background: radial-gradient(ellipse at top, var(--bg-glow, #0e1428) 0%, var(--bg) 60%);
+    /* ...rest unchanged */
+}
+body.light-mode{
+    --bg-glow: #dce5f7; /* soft light glow instead of navy */
+}
+
+html{
+    background: var(--bg);
+    overscroll-behavior: none; /* stops pull-to-refresh and edge-swipe-back from hijacking the gesture */
+    overflow-x: hidden;
+    width: 100%;
+    max-width: 100vw;
+}
+body{
+    overscroll-behavior-y: contain; /* extra safety net specifically for vertical rubber-banding */
+}
+html, body{
+    scrollbar-width: none;        /* Firefox */
+    -ms-overflow-style: none;     /* old Edge/IE */
+}
+html::-webkit-scrollbar, body::-webkit-scrollbar{
+    display: none;                /* Chrome/Safari */
+}
+
+/* Rank-S gets a shimmering badge; other ranks just use --current-rank-color directly. */
+body.rank-S #rank-badge{
+    background: linear-gradient(90deg, #fff 0%, var(--rank-S-color) 50%, #fff 100%);
+    background-size: 200% auto;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    animation: shimmer 2s linear infinite; /* keyframes defined in §26 */
+}
+
+#avatar-frame{ background: linear-gradient(145deg, var(--current-rank-color), var(--bg)); filter: drop-shadow(0 0 14px var(--current-rank-color)); }
+#rank-badge{ color: var(--current-rank-color); border-color: var(--current-rank-color); }
+
+
+/* ================================================================
+   §2. GLOBAL RESETS
+   ================================================================ */
+*{ box-sizing: border-box; }
+
+button{
+    appearance: none;
+    -webkit-appearance: none;
+    font: inherit;
+    margin: 0;
+}
+
+::-webkit-scrollbar{ width: 8px; height: 8px; }
+::-webkit-scrollbar-track{ background: var(--bg); }
+::-webkit-scrollbar-thumb{ background: var(--line-bright); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover{ background: var(--accent); }
+
+:focus-visible{ outline: 2px solid var(--cyan); outline-offset: 2px; }
+
+
+/* ================================================================
+   §3. PAGE LAYOUT
+   ================================================================ */
+body {
+    background: radial-gradient(ellipse at top, #0e1428 0%, var(--bg) 60%);
+    color: var(--text);
+    font-family: 'Rajdhani', sans-serif;
+    overflow-x: hidden;
+    overflow-y: auto;
+    min-height: 100vh;
+    margin: 0;
+}
+
+#title{
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 900;
+    letter-spacing: 8px;
+    font-size: 34px;
+    text-align: center;
+    margin: 0 0 34px;
+    text-transform: uppercase;
+    background: linear-gradient(90deg, var(--cyan) 0%, #fff 50%, var(--accent) 100%);
+    background-size: 200% auto;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    text-shadow: 0 0 30px rgba(77,159,255,0.45);
+    animation: shimmer 4s linear infinite; /* keyframes defined in §26 */
+}
+
+.container {
+    position: relative;
+    z-index: 1;
+    width: 1000px;
+    max-width: 94vw;
+    margin: 0 auto;
+    text-align: center;
+    padding: 140px 0 120px;
+}
+
+input{
+    background-color: var(--panel);
+    color: var(--text);
+    font-family: 'Rajdhani', sans-serif;
+    font-weight: 500;
+    font-size: 15px;
+    letter-spacing: 0.5px;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    padding: 8px 12px;
+    width: 100%;
+}
+input::placeholder{
+    color: var(--text-dim);
+    text-transform: uppercase;
+    font-size: 12px;
+    letter-spacing: 1.5px;
+}
+input:focus{
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(77,159,255,0.15);
+}
+input:hover{ border-color: var(--line-bright); }
+
+
+/* ================================================================
+   §4. HUD — CORNER BUTTONS (stats / streak / mute / undo)
+   ================================================================ */
+.hud-btn{
+    position: fixed;
+    top: 16px;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    padding: 10px 16px;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 11px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    cursor: pointer;
+    z-index: 500;
+    transition: border-color 0.2s ease, color 0.2s ease, transform 0.15s ease;
+}
+.hud-btn:hover{ border-color: var(--line-bright); color: var(--cyan); transform: translateY(-2px); }
+
+#hud-right{
+    position: fixed;
+    top: 16px;
+    right: 10px;      /* pushes the whole group in from the edge — raise this further to shift everything left more */
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    z-index: 500;
+}
+#hud-right .hud-btn,
+#hud-right #streak{
+    position: static;   /* cancel individual fixed positioning — the flex container handles layout now */
+    top: auto;
+    right: auto;
+}
+
+/* Undo/Redo: neutral gray instead of gold, since they're everyday utility actions now, not a rare rescue button */
+#undo-btn, #redo-btn{
+    color: var(--text-dim);
+    border-color: var(--line);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+#undo-btn:hover, #redo-btn:hover{
+    color: var(--cyan);
+    border-color: var(--line-bright);
+}
+#undo-btn:disabled, #redo-btn:disabled{
+    opacity: 0.35;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+#undo-btn:disabled:hover, #redo-btn:disabled:hover{
+    color: var(--text-dim);
+    border-color: var(--line);
+    transform: none;
+}
+
+#streak{
+    color: var(--cyan);
+    border-color: rgba(102,204,255,0.35);
+    cursor: default;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    width: 85px;
+    height: 35px;
+}
+#streak:hover{ transform: none; border-color: rgba(102,204,255,0.35); color: var(--cyan); }
+#streak-icon{
+    font-size: 13px;
+    color: var(--cyan);
+    text-shadow: 0 0 8px var(--cyan), 0 0 16px rgba(102,204,255,0.6);
+    animation: streakFlicker 2.4s ease-in-out infinite;
+}
+@keyframes streakFlicker{
+    0%, 100% { opacity: 1; text-shadow: 0 0 8px var(--cyan), 0 0 16px rgba(102,204,255,0.6); }
+    50% { opacity: 0.75; text-shadow: 0 0 4px var(--cyan), 0 0 8px rgba(102,204,255,0.35); }
+}
+
+#mute-toggle{
+    position: fixed;
+    bottom: 28px;
+    left: 28px;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    color: var(--text-dim);
+    font-size: 17px;
+    cursor: pointer;
+    z-index: 800;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: border-color 0.2s ease, transform 0.15s ease;
+}
+#mute-toggle:hover{ border-color: var(--line-bright); transform: translateY(-2px); }
+
+/* Before the user's first-ever log, most HUD controls are visible but
+   inert (nothing to show yet) — dimmed + unclickable. script.js toggles
+   body.pre-log on/off based on whether any skills exist. */
+body.pre-log .hud-btn,
+body.pre-log #quest,
+body.pre-log #focusButton,
+body.pre-log #mute-toggle{
+    pointer-events: none;
+    opacity: 0.3;
+}
+
+
+/* ================================================================
+   §5. HUD — DAILY QUEST BUTTON
+   ================================================================ */
+#quest{
+    position: fixed;
+    top: 16px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--panel-2);
+    border: 1px solid var(--line-bright);
+    border-radius: 8px;
+    width: 168px;
+    padding: 12px 14px;
+    color: var(--text);
+    text-align: center;
+    font-family: 'Orbitron', sans-serif;
+    cursor: pointer;
+    z-index: 500;
+    transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+#quest:hover{ transform: translateX(-50%) translateY(-2px); }
+#quest .quest-label{
+    font-size: 12px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--cyan);
+    display: block;
+}
+
+.quest-badge{
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: var(--gold);
+    box-shadow: 0 0 8px var(--gold);
+    display: none;
+}
+
+/* State: quest exists / needs attention — pulses to draw the eye */
+#quest.quest-available{ animation: questPulse 1.8s ease-in-out infinite; }
+#quest.quest-available .quest-badge{
+    display: block;
+    animation: badgeBlink 1.8s ease-in-out infinite;
+}
+#quest.quest-available .quest-label{
+    background: linear-gradient(90deg, var(--gold) 0%, #fff 50%, var(--gold) 100%);
+    background-size: 200% auto;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    animation: shimmer 2.2s linear infinite;
+}
+@keyframes questPulse {
+    0%, 100% {
+        box-shadow: 0 0 6px rgba(255,200,87,0.25);
+        border-color: var(--line-bright);
+        transform: translateX(-50%) scale(1);
+    }
+    50% {
+        box-shadow: 0 0 24px rgba(255,200,87,0.9), 0 0 44px rgba(255,200,87,0.4);
+        border-color: var(--gold);
+        transform: translateX(-50%) scale(1.035);
+    }
+}
+@keyframes badgeBlink {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.35; transform: scale(0.8); }
+}
+
+/* State: user has already seen today's quests, nothing new to flag */
+#quest.quest-seen{ box-shadow: none; border-color: var(--line); }
+
+/* State: all of today's quests are done */
+#quest.quest-complete{
+    border-color: var(--cyan);
+    box-shadow: 0 0 12px rgba(102,204,255,.3);
+}
+#quest.quest-complete .quest-label{ color: var(--cyan); }
+#quest.quest-complete .quest-badge{ display: none; }
+
+
+/* ================================================================
+   §6. HUD — FLOATING LOG BUTTON (FAB)
+   ================================================================ */
+#log-fab{
+    position: fixed;
+    bottom: 28px;
+    right: 28px;
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: linear-gradient(145deg, var(--accent-soft), var(--accent));
+    border: 1px solid var(--cyan);
+    color: #fff;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 30px;
+    font-weight: 700;
+    cursor: pointer;
+    z-index: 800;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.4), 0 0 20px rgba(77,159,255,0.35);
+    transition: transform 0.2s cubic-bezier(.3,1.5,.5,1), box-shadow 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+    padding: 0 0 3px 0;
+}
+#log-fab:hover{ transform: scale(1.08); box-shadow: 0 4px 26px rgba(0,0,0,0.5), 0 0 32px rgba(77,159,255,0.55); }
+#log-fab:active{ transform: scale(0.92); }
+
+/* Pulses when the user hasn't logged anything today yet */
+#log-fab.fab-available{ animation: fabPulse 1.8s ease-in-out infinite; }
+@keyframes fabPulse{
+    0%, 100% {
+        box-shadow: 0 4px 20px rgba(0,0,0,0.4), 0 0 20px rgba(77,159,255,0.35);
+        transform: scale(1);
+    }
+    50% {
+        box-shadow: 0 4px 20px rgba(0,0,0,0.4), 0 0 40px rgba(77,159,255,0.95), 0 0 70px rgba(102,204,255,0.5);
+        transform: scale(1.08);
+    }
+}
+
+#fab-label{
+    position: fixed;
+    bottom: 46px;
+    right: 96px;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 11px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--cyan);
+    background: var(--panel);
+    border: 1px solid var(--line);
+    padding: 7px 14px;
+    border-radius: var(--radius-sm);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease;
+    z-index: 800;
+    white-space: nowrap;
+}
+#log-fab:hover + #fab-label{ opacity: 1; } /* tooltip only shows on hover */
+
+
+/* ================================================================
+   §7. CHARACTER PROFILE BAR (top-left)
+   ================================================================ */
+#profile{
+    position: fixed;
+    top: 8px;
+    left: 1px;
+    width: min(400px, calc(100vw - 12px));
+    height: auto;
+    min-height: 84px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 12px 16px;
+    z-index: 600;
+}
+
+#avatar-wrap{ position: relative; }
+
+#theme-toggle{
+    position: absolute;
+    bottom: -4px;
+    right: -4px;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: var(--panel);
+    border: 1px solid var(--line-bright);
+    color: var(--text-dim);
+    font-size: 11px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 2;
+    transition: border-color .2s ease, transform .15s ease;
+}
+#theme-toggle:hover{ border-color: var(--cyan); transform: scale(1.1); }
+
+#profile .scan-line{ opacity: 0.9; animation: scanSweep 0.9s ease-out 0.35s both; } /* keyframes in §11 */
+
+#profile-info{ flex: 1; min-width: 0; }
+#name-row{ display: flex; align-items: center; gap: 12px; margin-bottom: 8px; flex-wrap: wrap; }
+#char-name{ font-size: 15px; }
+#char-name:hover, #char-name:focus{ border-bottom-color: var(--line-bright); }
+
+#rank-badge{
+    display: inline-block;
+    padding: 3px 11px;
+    border-radius: 4px;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 9px;
+    letter-spacing: 2px;
+    border: 1px solid currentColor;
+    transition: color 0.4s ease, border-color 0.4s ease;
+}
+
+#level-text{
+    font-family: 'Orbitron', sans-serif;
+    font-size: 14px;
+    letter-spacing: 3px;
+    color: var(--text-dim);
+    margin-bottom: 12px;
+}
+
+#xp-caption{
+    font-family: 'Orbitron', sans-serif;
+    font-size: 10px;
+    letter-spacing: 1.5px;
+    color: var(--text-dim);
+    margin-top: 8px;
+    text-transform: uppercase;
+}
+
+.xp-bar-container{ max-width: 130px; height: 6px; }
+.xp-bar {
+    position: relative;
+    overflow: hidden; /* keeps the shine streak below from spilling out */
+    background: linear-gradient(90deg, var(--accent-soft), var(--cyan));
+    width: 0%;
+    height: 100%;
+    border-radius: 40px;
+    transition: width 0.5s cubic-bezier(.3,.8,.4,1);
+}
+/* Thin diagonal light streak that sweeps across the XP bar every 4s */
+.xp-bar::after{
+    content: "";
+    position: absolute;
+    top: 0;
+    left: -60%;
+    width: 35%;
+    height: 100%;
+    background: linear-gradient(100deg, transparent, rgba(255,255,255,0.9), transparent);
+    mix-blend-mode: screen;
+    animation: barShineSweep 4s ease-in-out infinite;
+}
+@keyframes barShineSweep{
+    0%, 75% { left: -60%; }
+    100%    { left: 130%; }
+}
+
+@media (max-width: 640px){
+    /* Collapse the whole profile bar down to just the avatar icon */
+    #profile{
+        width: 56px;
+        height: 56px;
+        min-height: 56px;
+        padding: 0;
+        border-radius: 50%;
+        justify-content: center;
+        align-items: center;
+       
+    }
+    #profile-info,
+    #profile .scan-line{ display: none; }
+
+    .container{ padding-top: 90px; } /* icon-only bar needs way less clearance than the full bar's 140px */
+}
+
+
+/* ================================================================
+   §8. SKILL LOG GRID
+   ================================================================ */
+#log{
+    list-style-type: none;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;   /* centers the last, incomplete row automatically */
+    gap: 26px;
+    padding: 0;
+    margin: 0 0 40px;
+}
+#log .card{
+    flex: 1 1 380px;   /* grow/shrink around a 380px preferred width */
+    min-width: 340px;
+    max-width: 420px;
+}
+
+.card{
+    cursor: grab;
+    touch-action: pan-y; /* stops mobile scroll from fighting the drag gesture */
+}
+
+.card-dragging{
+    cursor: grabbing;
+    transform: scale(1.03) !important;
+    box-shadow: 0 24px 50px rgba(0,0,0,0.55), 0 0 30px var(--card-color);
+}
+
+.card-placeholder{
+    background: transparent;
+    box-shadow: none;
+    opacity: 0.35;
+}
+.card-placeholder .card-layer-glow,
+.card-placeholder .card-layer-metal,
+.card-placeholder .card-sheen{
+    display: none;
+}
+
+
+/* ================================================================
+   §9. SKILL CARDS — SHELL & LAYER SYSTEM
+   ================================================================
+   A card is built from FOUR stacked layers (separate <div>s, added in
+   script.js's createCard()) sitting behind the real content:
+
+       .card-layer-black   solid black vignette   (--black-gradient)
+       .card-layer-tint    the rank color wash    (--tint)
+       .card-layer-metal   a diagonal light band  (--metal)   <- "the metallic effect"
+       .card-layer-glow    corner glow            (--glow / --glow-blur)
+
+   Each is its OWN div so you can look at exactly one effect at a time
+   in devtools by toggling the others' `opacity` to 0 — much easier
+   to isolate than when they were all baked into one background.
+
+   isolation: isolate on .card + z-index:-1 on the layers is what
+   pins them BEHIND your card's text/icon/bars. Without this, normal
+   CSS stacking rules would put position:absolute layers on TOP of
+   plain (non-positioned) content like .card-head — which is exactly
+   the "why can't I see my title/metal effect" bug this fixes.
+   ================================================================ */
+.card{
+    --card-color: #7c88a3;
+    --rank-color: #7c88a3;
+    --tint: 8%;
+    --glow-strength: 0.15;
+    --border-strength: 0.35;
+    --shine: 15%;
+
+    position: relative;
+    background:
+        linear-gradient(160deg,
+            color-mix(in srgb, var(--card-color) var(--tint), var(--panel-2)) 0%,
+            var(--panel) 70%);
+    border: 1px solid color-mix(in srgb, var(--card-color) calc(var(--border-strength) * 100%), var(--line));
+    box-shadow:
+        0 0 calc(var(--glow-strength) * 50px) color-mix(in srgb, var(--card-color) calc(var(--glow-strength) * 100%), transparent),
+        inset 0 0 20px rgba(0,0,0,0.15);
+    padding: 30px 28px 26px;
+    margin: 0;
+    border-radius: 4px;
+    text-align: left;
+    overflow: hidden;
+    clip-path: polygon(0 0, calc(100% - 26px) 0, 100% 26px, 100% 100%, 0 100%);
+    transition: border-color .25s ease, box-shadow .25s ease, transform .25s ease;
+}
+.card:hover{ transform: translateY(-5px); }
+
+/* thin top accent + corner notch, same recipe as .system-window's brackets */
+.card::before{
+    content: ""; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+    background: linear-gradient(90deg, var(--card-color), transparent 85%);
+}
+.card::after{
+    content: ""; position: absolute; top: 0; right: 0; width: 26px; height: 26px;
+    border-top: 2px solid var(--card-color);
+    border-right: 2px solid var(--card-color);
+    clip-path: polygon(100% 0, 100% 100%, 0 0);
+    opacity: calc(0.3 + var(--border-strength) * 0.5);
+}
+
+/* sheen sweep stays, just tone it down via --shine like before */
+.card-sheen{
+    position: absolute;
+    top: 0;
+    left: -60%;
+    width: 40%;
+    height: 100%;
+    background: linear-gradient(100deg, transparent, rgba(255,255,255,0.35), transparent);
+    mix-blend-mode: screen;
+    opacity: calc(var(--shine) / 100);
+    pointer-events: none;
+    animation: cardSheenSweep 3.5s ease-in-out infinite;
+}
+@keyframes cardSheenSweep{ 0%, 70% { left: -60%; } 100% { left: 130%; } }
+
+
+/* ================================================================
+   §10. SKILL CARDS — CONTENT
+   ================================================================ */
+.card-head{
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 18px;
+}
+.card-icon{
+    flex: 0 0 auto;
+    width: 50px;
+    height: 50px;
+    border-radius: 8px;
+    border: 1px solid var(--rank-color);
+    color: var(--rank-color);
+    background: radial-gradient(
+        circle,
+        color-mix(in srgb, var(--rank-color) 20%, transparent),
+        rgba(255,255,255,0.02)
+    );
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 700;
+    font-size: 20px;
+    text-shadow: 0 0 10px var(--rank-color);
+    box-shadow: 0 0 16px color-mix(in srgb, var(--rank-color) 30%, transparent) inset; /* glow follows --rank-color */
+}
+.card-head-text{ min-width: 0; flex: 1; }
+
+.title{
+    font-family: 'Orbitron', sans-serif;
+    font-size: 15.5px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--text);
+    margin-bottom: 8px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.level-pill{
+    display: inline-block;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 10.5px;
+    letter-spacing: 1px;
+    color: var(--rank-color);
+    border: 1px solid var(--rank-color);
+    border-radius: 20px;
+    padding: 3px 10px;
+    text-shadow: 0 0 6px var(--rank-color);
+}
+
+.skill-bar-container{
+    margin-top: 4px;
+    background-color: rgba(255,255,255,0.06);
+    width: 100%;
+    height: 10px;
+    border-radius: 50px;
+    border: 1px solid var(--line);
+    overflow: hidden;
+}
+.skill-bar{
+    background: linear-gradient(90deg,
+        color-mix(in srgb, var(--rank-color) 40%, black),
+        var(--rank-color));
+    box-shadow: 0 0 10px var(--rank-color);
+    width: 0%;
+    height: 100%;
+    border-radius: 40px;
+    filter: brightness(var(--bar-brightness, 1));
+    transition: width 0.4s cubic-bezier(.3,.8,.4,1), filter 0.4s ease;
+}
+
+.card-meta{
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 15px;
+}
+.xp{ font-size: 13px; color: var(--cyan); opacity: 0.9; }
+.hours{
+    font-size: 12px;
+    color: var(--silver);
+    opacity: 0.75;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.delete-btn{
+    position: absolute;
+    top: 34px;
+    right: 14px;
+    background-color: transparent;
+    color: var(--text-dim);
+    border: 1px solid var(--line);
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    border-radius: 4px;
+    cursor: pointer;
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 12px;
+    line-height: 1;
+    opacity: 0;
+    z-index: 2;
+    transition: opacity 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+.card:hover .delete-btn{ opacity: 1; }
+.delete-btn:hover{ color: var(--danger); border-color: var(--danger); }
+
+.quickadd-btn{
+    position: absolute;
+    bottom: 12px;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: transparent;
+    color: var(--text-dim);
+    border: 1px solid var(--line);
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 15px;
+    line-height: 1;
+    opacity: 0;
+    z-index: 2;
+    transition: opacity .2s ease, color .2s ease, border-color .2s ease, box-shadow .2s ease;
+}
+.card:hover .quickadd-btn{ opacity: 1; }
+.quickadd-btn:hover{
+    color: var(--card-color);
+    border-color: var(--card-color);
+    box-shadow: 0 0 6px color-mix(in srgb, var(--card-color) 45%, transparent);
+}
+
+/* Small "LEVEL UP" badge that pops above a card when a skill levels up */
+.level-pop{
+    position: absolute;
+    top: -14px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-family: 'Orbitron', sans-serif;
+    font-size: 11px;
+    letter-spacing: 1.5px;
+    color: var(--gold);
+    text-shadow: 0 0 10px rgba(255,200,87,0.8);
+    background: var(--panel-2);
+    border: 1px solid var(--gold);
+    padding: 3px 10px;
+    border-radius: 20px;
+    animation: levelPopFloat 1.3s ease forwards;
+    pointer-events: none;
+    white-space: nowrap;
+    z-index: 3;
+}
+@keyframes levelPopFloat{
+    0%   { opacity: 0; transform: translateX(-50%) translateY(0); }
+    15%  { opacity: 1; transform: translateX(-50%) translateY(-6px); }
+    80%  { opacity: 1; transform: translateX(-50%) translateY(-14px); }
+    100% { opacity: 0; transform: translateX(-50%) translateY(-22px); }
+}
+
+
+/* ================================================================
+   §11. MODALS — SHARED FRAME
+   ================================================================
+   Every modal (log, quest, stats, quick-add, delete/exit confirm) is
+   built from the same overlay + "system-window" combo below. Modal-
+   specific stuff (quest list styling, stat grid, etc) lives in its
+   own §12-§16 section further down.
+   ================================================================ */
+.modal-overlay{
+    display: none;
+    position: fixed;
+    inset: 0;
+    background-color: rgba(3,5,12,0);
+    align-items: center;
+    justify-content: center;
+    z-index: 3000;
+    padding: 20px;
+    transition: background-color 0.28s ease;
+    backdrop-filter: blur(0px);
+    -webkit-backdrop-filter: blur(0px);
+}
+.modal-overlay.active{
+    background-color: rgba(3,5,12,0.82);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+}
+
+.system-window{
+    position: relative;
+    background: var(--glass);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid var(--cyan);
+    color: var(--text);
+    box-shadow: 0 0 40px rgba(102,204,255,0.35), inset 0 0 30px rgba(59,107,209,0.1);
+}
+
+.system-window h2{
+    font-family: 'Orbitron', sans-serif;
+    font-size: 17px;
+    letter-spacing: 3px;
+    color: var(--cyan);
+    text-shadow: 0 0 16px rgba(102,204,255,0.5);
+    margin: 0 0 18px;
+}
+.system-window p{ font-size: 15px; line-height: 1.5; color: var(--text); margin: 0 0 20px; }
+
+/* Pop-in animation for the window itself when its overlay opens */
+.modal-overlay .system-window{
+    padding: 26px 22px 22px;
+    width: 320px;
+    max-width: 100%;
+    text-align: center;
+    transform: scale(0.85);
+    opacity: 0;
+    transition: transform 0.35s cubic-bezier(.2,.9,.3,1.2), opacity 0.3s ease;
+}
+.modal-overlay.active .system-window{ transform: scale(1); opacity: 1; }
+.modal-overlay .system-window::before, .modal-overlay .system-window::after{
+    opacity: 0;
+    transition: opacity 0.3s ease 0.15s;
+}
+.modal-overlay.active .system-window::before, .modal-overlay.active .system-window::after{ opacity: 1; }
+
+.system-window, .notify-window{
+    box-shadow:
+        0 0 0 1px rgba(102,204,255,0.15),   /* faint outer echo */
+        inset 0 0 0 1px rgba(102,204,255,0.25),  /* thin inner line */
+        0 0 40px rgba(102,204,255,0.35);
+}
+
+/* Cyan scanning line that sweeps down the window on open */
+.scan-line{
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--cyan), transparent);
+    box-shadow: 0 0 12px var(--cyan);
+}
+.modal-overlay .scan-line{ opacity: 0; }
+.modal-overlay.active .scan-line{ animation: scanSweep 0.6s ease-out 0.1s; opacity: 0.9; }
+@keyframes scanSweep{ 0% { top: 0; } 100% { top: 100%; } }
+
+.modal-actions{ display: flex; gap: 10px; justify-content: center; margin-top: 4px; flex-wrap: wrap; }
+
+.btn-primary{
+    font-family: 'Orbitron', sans-serif;
+    font-size: 12px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    background: linear-gradient(135deg, var(--accent-soft), var(--accent));
+    border: 1px solid var(--accent);
+    color: #fff;
+    padding: 7px 16px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: transform 0.15s ease, box-shadow 0.2s ease;
+}
+.btn-primary:hover{ box-shadow: 0 0 20px rgba(77,159,255,0.5); transform: translateY(-1px); }
+.btn-primary:active{ transform: scale(0.96); }
+.btn-primary:disabled{ opacity: 0.4; cursor: not-allowed; box-shadow: none; transform: none; }
+
+.btn-ghost{
+    font-family: 'Orbitron', sans-serif;
+    font-size: 11px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    background: transparent;
+    border: 1px solid var(--line);
+    color: var(--text-dim);
+    padding: 7px 16px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: border-color 0.2s ease, color 0.2s ease, background .2s ease;
+}
+.btn-ghost:hover{ border-color: var(--line-bright); color: var(--cyan); }
+
+.btn-danger{ border-color: var(--danger); color: var(--danger); }
+.btn-danger:hover{ background: rgba(227,82,34,0.12); border-color: var(--danger); color: var(--danger); }
+.btn-safe{ border-color: var(--line-bright); color: var(--cyan); }
+
+/* Delete-skill / exit-focus confirmations use a simpler, non-system-window
+   card on purpose — they're meant to feel more "are you sure?" than sci-fi. */
+.modal-card-simple{
+    position: relative;
+    background: var(--panel-2);
+    border: 1px solid var(--danger);
+    border-radius: var(--radius);
+    padding: 26px 22px;
+    width: 300px;
+    max-width: 100%;
+    text-align: center;
+    color: var(--text);
+    transform: scale(0.9);
+    opacity: 0;
+    transition: transform 0.3s ease, opacity 0.25s ease;
+}
+.modal-overlay.active .modal-card-simple{ transform: scale(1); opacity: 1; }
+.modal-card-simple p{ font-size: 15px; margin: 0 0 20px; }
+
+
+/* ================================================================
+   §12. MODAL — LOG ACTIVITY
+   ================================================================ */
+.field-group{ text-align: left; margin-bottom: 18px; }
+.field-group label{
+    display: block;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-bottom: 8px;
+}
+.chip-row{ display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.chip{
+    font-family: 'Rajdhani', sans-serif;
+    font-weight: 600;
+    font-size: 12px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--line);
+    color: var(--text-dim);
+    padding: 6px 12px;
+    border-radius: 20px;
+    cursor: pointer;
+    transition: border-color 0.2s ease, color 0.2s ease, background 0.2s ease, transform 0.15s ease;
+}
+.chip:hover{ border-color: var(--line-bright); color: var(--cyan); transform: translateY(-1px); }
+.chip:active{ transform: scale(0.94); }
+.chip.selected{ background: var(--accent-soft); border-color: var(--accent); color: #fff; }
+.chip-hint{ font-size: 12px; color: var(--text-dim); font-style: italic; }
+.clear-chip{ border-color: var(--danger); color: var(--danger); opacity: 0.85; }
+
+.input-error{ animation: inputShake 0.4s ease; border-color: var(--danger) !important; }
+@keyframes inputShake{
+    0%, 100% { transform: translateX(0); }
+    20% { transform: translateX(-6px); }
+    40% { transform: translateX(6px); }
+    60% { transform: translateX(-4px); }
+    80% { transform: translateX(4px); }
+}
+
+
+/* ================================================================
+   §13. MODAL — DAILY QUEST
+   ================================================================ */
+.quest-window{
+    width: 500px !important;
+    min-height: 460px;
+    padding: 38px 30px 28px !important;
+    text-align: left !important;
+    display: flex;
+    flex-direction: column;
+}
+.quest-window h2{ text-align: center; margin-bottom: 26px; }
+
+#quest-list{
+    flex: 1;
+    list-style: none;
+    margin: 60px 0 22px; /* pushes quests lower, below the header */
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+.quest-empty{
+    font-size: 14px;
+    color: var(--text-dim);
+    font-style: italic;
+    text-align: center;
+    padding: 10px 0;
+}
+
+/* Checklist-row quest item. (Earlier iterations tried a progress-bar
+   look and a checkbox-square pseudo-element; both were superseded —
+   this is the current shape.) */
+.quest-item{
+    position: relative;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    flex-wrap: wrap;
+    gap: 6px;
+    row-gap: 8px;
+    padding: 12px 14px;
+    transition: border-color .25s ease, background .25s ease, box-shadow .25s ease;
+}
+.quest-item-done{
+    border-color: var(--cyan);
+    background: rgba(102,204,255,0.08);
+    box-shadow: 0 0 10px rgba(102,204,255,0.15);
+}
+
+.quest-item-top{
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 0;
+    flex: 1;
+}
+.quest-item-name{
+    font-family: 'Orbitron', sans-serif;
+    font-size: 14px;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    color: var(--text);
+}
+.quest-item-status{
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 13px;
+    letter-spacing: 1px;
+    color: var(--cyan);
+    white-space: nowrap;
+}
+.quest-item-done .quest-item-status{ color: var(--cyan); text-shadow: 0 0 6px rgba(102,204,255,0.6); }
+
+.quest-item-bar-container{
+    background: rgba(255,255,255,0.05);
+    width: 100%;
+    height: 7px;
+    border-radius: 50px;
+    border: 1px solid var(--line);
+    overflow: hidden;
+    margin-bottom: 10px;
+}
+.quest-item-bar{
+    background: linear-gradient(90deg, var(--accent-soft), var(--cyan));
+    width: 0%;
+    height: 100%;
+    border-radius: 40px;
+    transition: width 0.4s cubic-bezier(.3,.8,.4,1);
+}
+.quest-item-done .quest-item-bar-container{ margin-bottom: 0; }
+
+.quest-item-actions{ display: flex; justify-content: flex-end; gap: 8px; margin-left: 0; }
+.quest-item-log{ width: auto; padding: 5px 10px; font-size: 9.5px; }
+.quest-item-edit{ padding: 5px 9px; font-size: 9.5px; width: auto; margin-left: 0; }
+
+.quest-item-flash{ animation: questBoxFlash .6s ease; }
+@keyframes questBoxFlash{
+    0%   { box-shadow: 0 0 0 rgba(102,204,255,0); }
+    40%  { box-shadow: 0 0 22px rgba(102,204,255,0.55); border-color: var(--cyan); }
+    100% { box-shadow: 0 0 0 rgba(102,204,255,0); }
+}
+
+/* State-choice screen (Manual vs Automatic), shown before any quests exist */
+#quest-choice{ align-self: center; }
+#quest-choice .modal-actions{ flex-direction: column; align-items: center; margin-top: 30px; }
+
+#quest-choose-manual, #quest-choose-auto{
+    width: 220px;
+    padding: 12px 20px;
+    background: transparent;
+    border: 1px solid var(--cyan);
+    color: var(--cyan);
+    box-shadow: none;
+}
+#quest-choose-manual:hover, #quest-choose-auto:hover{
+    background: rgba(102,204,255,0.08);
+    box-shadow: 0 0 12px rgba(102,204,255,0.4);
+}
+
+/* Push the close button down further when the choice screen (taller
+   than the quest list) is what's showing */
+#quest-card:has(#quest-choice[style*="display: block"]) #quest-close-btn{ margin-top: 100px; }
+
+#quest-show-builder{ width: auto; padding: 4px 20px; font-size: 11px; letter-spacing: 1.5px; margin: 100px auto 0; }
+#quest-close-btn{ width: 140px; padding: 8px 14px; font-size: 10.5px; align-self: center; margin-top: 7px; }
+.quest-refresh-btn{ position: absolute; top: 14px; right: 14px; width: 30px; height: 30px; padding: 0; }
+
+.quest-pager{ display: flex; justify-content: flex-end; align-items: center; gap: 10px; margin-left: 320px; }
+.quest-pager-btn{
+    background: transparent;
+    border: 1px solid var(--cyan, #4d9fff);
+    color: var(--cyan, #4d9fff);
+    width: 20px;
+    height: 28px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 16px;
+    line-height: 1;
+    text-align: right;
+}
+.quest-pager-btn:disabled{ opacity: 0.3; cursor: default; }
+.quest-pager-label{ font-size: 0.85em; color: var(--cyan, #4d9fff); font-family: inherit; text-align: right; }
+
+
+/* ================================================================
+   §14. MODAL — QUEST ARRIVAL / NOTIFY (system-message skin)
+   ================================================================
+   An alternate frame from .system-window (§11), used for one-off
+   system messages: a new quest arriving, a streak notice, a delete
+   confirmation, etc. Re-colors via --current-rank-color so it always
+   matches whatever rank the character currently is.
+   ================================================================ */
+.notify-window{
+    position: relative;
+    width: 380px;
+    max-width: 100%;
+    padding: 30px 34px;
+    text-align: center;
+    background: linear-gradient(160deg, rgba(13,18,32,0.9), rgba(6,9,18,0.95));
+    border: 1px solid var(--cyan);
+    box-shadow: 0 0 40px rgba(102,204,255,0.35), inset 0 0 30px rgba(102,204,255,0.08);
+    transform: scale(0.9); opacity: 0;
+    transition: transform .3s cubic-bezier(.2,.9,.3,1.2), opacity .3s ease;
+}
+.modal-overlay.active .notify-window{ transform: scale(1); opacity: 1; }
+
+.notify-icon{
+    width: 40px; height: 40px; margin: 0 auto 14px;
+    border: 2px solid var(--cyan);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 20px;
+    color: var(--current-rank-color);
+    text-shadow: 0 0 10px var(--current-rank-color);
+    box-shadow: 0 0 14px color-mix(in srgb, var(--current-rank-color) 45%, transparent);
+}
+.notify-title{
+    font-family: 'Orbitron', sans-serif;
+    font-size: 18px; letter-spacing: 6px;
+    color: var(--cyan);
+    text-shadow: 0 0 16px var(--cyan);
+    margin-bottom: 18px;
+}
+.notify-body{ font-size: 15px; line-height: 1.6; color: var(--text); margin-bottom: 24px; }
+.notify-danger{ color: #ff4d4d; font-weight: 700; text-shadow: 0 0 8px rgba(255,77,77,0.6); }
+
+.btn-notify{
+    font-family: 'Rajdhani', sans-serif;
+    font-weight: 600; font-size: 14px;
+    background: transparent;
+    border: 1px solid rgba(255,255,255,0.3);
+    color: var(--text);
+    padding: 10px 26px;
+    cursor: pointer;
+    transition: border-color .2s ease, box-shadow .2s ease;
+}
+.btn-notify:hover{ border-color: var(--cyan); box-shadow: 0 0 12px rgba(102,204,255,0.4); }
+.btn-notify-accent{ border-color: var(--cyan); color: var(--cyan); }
+
+.quest-header{ display: flex; align-items: center; gap: 14px; margin-bottom: 18px; }
+.notify-title-box{
+    font-family: 'Orbitron', sans-serif;
+    font-size: 16px; letter-spacing: 4px;
+    color: var(--current-rank-color);
+    text-shadow: 0 0 14px var(--current-rank-color);
+    border: 1px solid color-mix(in srgb, var(--current-rank-color) 45%, transparent);
+    padding: 8px 18px;
+    flex: 1;
+    text-align: center;
+}
+
+.quest-arrival-line{
+    font-size: 13px; color: var(--text-dim);
+    text-align: left; margin-bottom: 20px;
+}
+.quest-goal-heading{
+    font-family: 'Orbitron', sans-serif;
+    font-size: 13px; letter-spacing: 3px;
+    color: var(--text);
+    text-align: left;
+    border-bottom: 1px solid rgba(255,255,255,0.25);
+    padding-bottom: 6px;
+    margin-bottom: 16px;
+}
+
+
+
+
+/* ================================================================
+   §16. MODAL — STATS & QUICK-ADD
+   ================================================================
+   No dedicated rules of their own — both reuse .system-window (§11)
+   and, for Quick-Add, the .chip / .hm-input-row styles from §12.
+   ================================================================ */
+
+
+/* ================================================================
+   §17. LEVEL-UP CELEBRATION
+   ================================================================
+   Two looks share this one overlay:
+     - Skill level-up / normal character level-up: big number + rings
+     - Character RANK-UP ("ARISE"): overlay gets .shadow-mode added,
+       which swaps in the emblem/eyebrow/tendrils look and re-colors
+       everything via --shadow-color (set inline per-rank by JS).
+   ================================================================ */
+#levelup-overlay{
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 5000;
+    align-items: center;
+    justify-content: center;
+    background-color: rgba(4,6,14,0);
+    transition: background-color 0.3s ease;
+    cursor: pointer;
+}
+#levelup-overlay.active{ background-color: rgba(4,6,14,0.8); }
+
+#levelup-content{
+    position: relative;
+    text-align: center;
+    transform: scale(0.5);
+    opacity: 0;
+    transition: transform 0.4s cubic-bezier(.34,1.56,.64,1), opacity 0.3s ease;
+}
+#levelup-overlay.active #levelup-content{ transform: scale(1); opacity: 1; }
+
+.levelup-ring{
+    position: absolute;
+    top: 50%; left: 50%;
+    width: 50px; height: 50px;
+    margin: -25px 0 0 -25px;
+    border-radius: 50%;
+    border: 2px solid var(--cyan);
+    opacity: 0;
+}
+#levelup-overlay.active .levelup-ring{ animation: ringExpand 1.1s ease-out forwards; }
+@keyframes ringExpand{
+    0%   { transform: scale(0.4); opacity: 0.9; }
+    100% { transform: scale(7); opacity: 0; }
+}
+
+#levelup-label{
+    font-family: 'Orbitron', sans-serif;
+    font-size: 18px;
+    letter-spacing: 8px;
+    color: var(--levelup-color, var(--cyan));
+    margin-bottom: 6px;
+    text-shadow:
+        0 0 10px var(--levelup-color, var(--cyan)),
+        0 0 28px color-mix(in srgb, var(--levelup-color, var(--cyan)) 65%, transparent);
+}
+#levelup-level{
+    font-family: 'Orbitron', sans-serif;
+    font-size: 84px;
+    font-weight: 900;
+    color: #fff;
+    line-height: 1;
+    text-shadow:
+        0 0 12px #ffffff,
+        0 0 30px var(--levelup-color, var(--cyan)),
+        0 0 65px color-mix(in srgb, var(--levelup-color, var(--cyan)) 70%, transparent);
+}
+#levelup-rank{ display: none; margin-top: 14px; font-family: 'Orbitron', sans-serif; font-size: 14px; letter-spacing: 3px; color: var(--gold); }
+
+#confetti-layer{ position: fixed; inset: 0; z-index: 5001; pointer-events: none; overflow: hidden; }
+.confetti-piece{ position: absolute; opacity: 0; animation: confettiBurst 1.1s cubic-bezier(.15,.8,.3,1) forwards; }
+@keyframes confettiBurst{
+    0%   { transform: translate(0,0) rotate(0deg); opacity: 1; }
+    100% { transform: translate(var(--dx), calc(var(--dy) + 160px)) rotate(var(--rot)); opacity: 0; }
+}
+
+/* ---- "ARISE" shadow-mode overrides (character rank-up only) ---- */
+#levelup-overlay.shadow-mode{
+    background: radial-gradient(circle at 50% 35%, color-mix(in srgb, var(--shadow-color, var(--violet)) 22%, #06040c) 0%, #05040a 72%);
+}
+#levelup-overlay.shadow-mode.active{
+    background: radial-gradient(circle at 50% 35%, color-mix(in srgb, var(--shadow-color, var(--violet)) 26%, #06040c) 100%, #05040a 72%);
+}
+#levelup-overlay.shadow-mode #levelup-label{
+    font-family: 'Rajdhani', serif;
+    font-weight: 700;
+    font-size: 26px;
+    letter-spacing: 10px;
+    color: #f4f0ff;
+    text-shadow: 0 0 20px var(--shadow-color, var(--violet)), 0 0 40px var(--shadow-color, var(--violet));
+}
+#levelup-overlay.shadow-mode #levelup-level{ display: none; } /* number hidden, emblem shown instead */
+#levelup-overlay.shadow-mode .levelup-ring{ border-color: var(--shadow-color, var(--violet)); }
+#levelup-overlay.shadow-mode #levelup-rank{
+    display: block;
+    font-family: 'Rajdhani', sans-serif;
+    font-weight: 500;
+    font-size: 14px;
+    letter-spacing: 0.5px;
+    text-transform: none;
+    color: var(--shadow-color, var(--violet));
+    margin-top: 8px;
+}
+
+#levelup-eyebrow{
+    display: none;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 12px;
+    letter-spacing: 8px;
+    color: var(--shadow-color, var(--violet));
+    text-transform: uppercase;
+    margin-bottom: 20px;
+    opacity: 0;
+    transition: opacity .4s ease .2s;
+}
+#levelup-overlay.active #levelup-eyebrow{ opacity: 1; }
+#levelup-overlay.shadow-mode #levelup-eyebrow{ display: block; }
+
+#levelup-emblem{
+    display: none;
+    margin: 0 auto 20px;
+    width: 250px; height: 200px;
+    color: var(--shadow-color, var(--violet));
+    opacity: 0;
+    transform: scale(0.7);
+    transition: opacity .5s ease .1s, transform .5s cubic-bezier(.2,.9,.3,1.2) .1s;
+}
+#levelup-overlay.active #levelup-emblem{ opacity: 1; transform: scale(1); }
+#levelup-overlay.shadow-mode #levelup-emblem{ display: block; }
+
+.emblem-ring-outer{ fill: none; stroke: currentColor; stroke-width: 1; opacity: .7; }
+.emblem-ring-inner{ fill: none; stroke: currentColor; stroke-width: 0.5; stroke-dasharray: 2 4; opacity: .45; }
+.emblem-star{
+    fill: color-mix(in srgb, currentColor 30%, transparent);
+    stroke: currentColor;
+    stroke-width: 1.5;
+    filter: drop-shadow(0 0 8px currentColor);
+}
+.emblem-seal{ fill: var(--bg); stroke: currentColor; stroke-width: 1; }
+.emblem-letter{ fill: currentColor; font-family: 'Rajdhani', serif; font-size: 16px; }
+
+#levelup-tendrils{ display: none; justify-content: center; gap: 6px; margin-top: 22px; }
+#levelup-overlay.shadow-mode #levelup-tendrils{ display: flex; }
+#levelup-tendrils span{
+    width: 3px;
+    background: linear-gradient(to top, transparent, var(--shadow-color, var(--violet)));
+    border-radius: 2px;
+    opacity: 0;
+    transform: scaleY(0.4);
+    transform-origin: bottom;
+    transition: opacity .4s ease, transform .4s cubic-bezier(.2,.9,.3,1.2);
+}
+#levelup-overlay.active #levelup-tendrils span{ opacity: 1; transform: scaleY(1); }
+#levelup-tendrils span:nth-child(1){ height: 22px; transition-delay: .05s; }
+#levelup-tendrils span:nth-child(2){ height: 34px; transition-delay: .1s; }
+#levelup-tendrils span:nth-child(3){ height: 16px; transition-delay: .15s; }
+#levelup-tendrils span:nth-child(4){ height: 40px; transition-delay: .2s; }
+#levelup-tendrils span:nth-child(5){ height: 24px; transition-delay: .25s; }
+
+/* Continue button appears immediately (no fade-in delay) once shadow-mode is active */
+#levelup-continue-btn{
+    display: none;
+    margin-top: 32px;
+    padding: 11px 30px;
+    background: transparent;
+    border: 1px solid var(--shadow-color, var(--violet));
+    color: var(--shadow-color, var(--violet));
+    font-family: 'Rajdhani', sans-serif;
+    font-weight: 600;
+    font-size: 12px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity .4s ease .3s, background .2s ease, color .2s ease, box-shadow .2s ease;
+}
+#levelup-overlay.shadow-mode #levelup-continue-btn{ display: inline-block; opacity: 1; }
+#levelup-continue-btn:hover{
+    background: var(--shadow-color, var(--cyan));
+    color: #05040a;
+    box-shadow: 0 0 15px var(--shadow-color, var(--cyan)), 0 0 35px rgba(102,204,255,0.35);
+}
+
+
+/* ================================================================
+   §18. STREAK CELEBRATION
+   ================================================================
+   Fired when the user extends their streak. A charged navy energy
+   field fills the overlay, two SVG bolts travel in from the top and
+   bottom, and a central bolt graphic (built from stacked divs, not
+   raw text) punches in at the center.
+   ================================================================ */
+#streak-notify-overlay{
+    position: fixed;
+    inset: 0;
+    overflow: hidden;
+    background:
+        radial-gradient(
+            ellipse at center,
+            rgba(10, 35, 85, .42),
+            rgba(2, 6, 20, .82) 48%,
+            rgba(0, 2, 10, .96)
+        );
+}
+/* The bolt (#streak-lightning-container) sits at z-index 3100, above
+   the base .modal-overlay z-index of 3000 — so without this override
+   the ENTIRE overlay, text included, renders underneath the bolt no
+   matter what z-index the text itself gets. This is the actual fix. */
+#streak-notify-overlay.active{ z-index: 3300; backdrop-filter: none; -webkit-backdrop-filter: none; }
+
+/* Deep navy atmosphere */
+.streak-energy-field{ position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+
+.streak-energy-aura{
+    position: absolute;
+    width: 55vw;
+    height: 55vw;
+    min-width: 420px;
+    min-height: 420px;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    background:
+        radial-gradient(
+            circle,
+            rgba(35, 105, 220, .20) 0%,
+            rgba(20, 65, 155, .11) 28%,
+            rgba(5, 20, 65, .06) 48%,
+            transparent 72%
+        );
+    filter: blur(10px);
+    opacity: 0;
+    animation: streakAuraCharge 6s ease-in-out forwards;
+}
+
+/* SVG lightning paths */
+.streak-energy-svg{ position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.streak-energy-top{ transform: translateY(-2%); }    /* top strike: L -> N */
+.streak-energy-bottom{ transform: translateY(2%); }  /* bottom strike: G -> N */
+
+/* Glow layer */
+.streak-energy-path-glow{
+    fill: none;
+    stroke: rgba(55, 150, 255, .85);
+    stroke-width: 2.2;
+    stroke-linecap: round;
+    stroke-linejoin: bevel;
+    filter: blur(5px) drop-shadow(0 0 15px rgba(25, 105, 255, .8));
+    stroke-dasharray: 500;
+    stroke-dashoffset: 500;
+}
+/* Actual thin energy line */
+.streak-energy-path-main{
+    fill: none;
+    stroke: #b8e7ff;
+    stroke-width: .75;
+    stroke-linecap: round;
+    stroke-linejoin: bevel;
+    filter:
+        drop-shadow(0 0 3px rgba(210,245,255,.95))
+        drop-shadow(0 0 10px rgba(55,150,255,.95))
+        drop-shadow(0 0 20px rgba(15,80,220,.75));
+    stroke-dasharray: 500;
+    stroke-dashoffset: 500;
+}
+
+/* Top strike begins immediately */
+.streak-energy-top .streak-energy-path-main,
+.streak-energy-top .streak-energy-path-glow{
+    animation: streakEnergyTravel 3s cubic-bezier(.12,.7,.18,1) forwards;
+}
+/* Bottom strike is deliberately delayed by 1s */
+.streak-energy-bottom .streak-energy-path-main,
+.streak-energy-bottom .streak-energy-path-glow{
+    animation: streakEnergyTravel 3s cubic-bezier(.12,.7,.18,1) 1s forwards;
+}
+/* Slight electrical instability layered on top of the travel animation */
+.streak-energy-top .streak-energy-path-main{
+    animation-name: streakEnergyTravel, streakEnergyFlicker;
+    animation-duration: 3s, 3s;
+    animation-delay: 0s, 0s;
+    animation-timing-function: cubic-bezier(.12,.7,.18,1), linear;
+    animation-fill-mode: forwards, forwards;
+}
+.streak-energy-bottom .streak-energy-path-main{
+    animation-name: streakEnergyTravel, streakEnergyFlicker;
+    animation-duration: 3s, 3s;
+    animation-delay: 1s, 1s;
+    animation-timing-function: cubic-bezier(.12,.7,.18,1), linear;
+    animation-fill-mode: forwards, forwards;
+}
+
+/* Small electrical fragments scattered around the field */
+.streak-energy-spark{
+    position: absolute;
+    width: 2px;
+    height: 18px;
+    background: linear-gradient(180deg, transparent, #d9f5ff, #4da9ff, transparent);
+    filter: drop-shadow(0 0 5px #4da9ff) drop-shadow(0 0 14px rgba(35,120,255,.8));
+    opacity: 0;
+    transform: rotate(45deg);
+}
+.streak-spark-1{ left: 31%; top: 29%; }
+.streak-spark-2{ left: 69%; top: 64%; transform: rotate(-48deg); animation-delay: .8s !important; }
+.streak-spark-3{ left: 48%; top: 42%; transform: rotate(70deg); animation-delay: 1.5s !important; }
+#streak-notify-overlay.active .streak-energy-spark{ animation: streakSparkPulse 3s ease-in-out infinite; }
+
+/* Central charged bolt (built from .streak-bolt-core / .streak-bolt-glow, not raw text) */
+#streak-lightning-container{
+    position: fixed;
+    top: 50%; left: 50%;
+    width: 0; height: 0;
+    z-index: 3100; /* above the streak modal so it reads on top */
+    pointer-events: none;
+}
+#streak-lightning{
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 300px;
+    height: 400px;
+    transform: translate(-50%, -50%) scale(.55);
+    opacity: 0;
+    z-index: 10;
+    pointer-events: none;
+}
+#streak-lightning.active{ animation: streakBoltArrival 700ms cubic-bezier(.16,.9,.24,1) forwards; }
+#streak-lightning.leaving{ animation: streakBoltLeave 550ms ease-in forwards; }
+
+/* Dark navy energy silhouette */
+.streak-bolt-core{
+    position: absolute;
+    inset: 0;
+    clip-path: polygon(
+        58% 0%, 38% 31%, 66% 31%, 30% 57%, 58% 57%,
+        20% 100%, 44% 62%, 16% 62%, 50% 34%, 26% 34%
+    );
+    background:
+        linear-gradient(
+            145deg,
+            #d9f6ff 0%, #72caff 16%, #3288e8 40%, #17489c 68%, #091d50 100%
+        );
+    filter: drop-shadow(0 0 16px rgba(65,160,255,.9));
+}
+/* Large concentrated aura behind the bolt */
+.streak-bolt-glow{
+    position: absolute;
+    inset: -40px;
+    background:
+        radial-gradient(
+            ellipse,
+            rgba(55,145,255,.25),
+            rgba(20,70,170,.12) 38%,
+            transparent 70%
+        );
+    filter: blur(9px);
+}
+
+/* Streak text */
+.streak-strike-content{
+    position: relative;
+    z-index: 20;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+    text-align: center;
+    color: #d9f6ff;
+    text-shadow:
+        0 0 5px rgba(170,225,255,.9),
+        0 0 16px rgba(35,125,255,.85),
+        0 0 34px rgba(15,70,200,.6);
+    opacity: 0;
+    transform: translateY(-20px) scale(0.85);
+}
+.streak-strike-content.streak-text-in{ animation: streakTextPop 0.5s cubic-bezier(.2,.9,.3,1.3) forwards; }
+.streak-strike-content.streak-leaving{ animation: streakTextLeave 0.5s ease forwards; }
+
+.streak-strike-eyebrow{ color: #75caff; letter-spacing: .35em; }
+
+.streak-title-wrap{
+    position: relative;
+    display: inline-block;
+    padding: 6px 4px;
+    overflow: hidden; /* clips sparks to the width of the text */
+}
+.streak-strike-title{
+    position: relative;
+    z-index: 2;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 26px;
+    letter-spacing: 5px;
+    color: #eaf8ff;
+    text-shadow: 0 0 10px #fff, 0 0 22px #66ccff, 0 0 44px #66ccff;
+}
+.streak-strike-title strong{
+    color: #e5faff;
+    text-shadow: 0 0 5px #dff8ff, 0 0 15px #55b7ff, 0 0 35px #1d6dff;
+}
+.streak-strike-count{
+    font-family: 'Orbitron', sans-serif;
+    font-size: 40px;
+    font-weight: 900;
+    color: #66ccff;
+    text-shadow: 0 0 16px #66ccff, 0 0 34px rgba(102,204,255,0.7);
+}
+
+/* Thin jagged spark that sweeps RIGHT -> LEFT across the letters, like
+   a literal bolt skating over the text. Two of these run with
+   randomized delay/duration (set from JS) so each trigger looks a
+   little different. */
+.streak-text-spark{
+    position: absolute;
+    top: -15%;
+    right: 110%;
+    width: 3px;
+    height: 130%;
+    background: linear-gradient(180deg, transparent, #ffffff 35%, #8be9ff 55%, transparent);
+    filter: drop-shadow(0 0 5px #fff) drop-shadow(0 0 12px #66ccff);
+    transform: skewX(-14deg);
+    opacity: 0;
+    z-index: 3;
+    pointer-events: none;
+}
+.streak-strike-content.streak-text-in .streak-text-spark{ animation: sparkSweep 0.85s linear infinite; }
+
+.streak-strike-overlay.active{
+    background:
+        radial-gradient(
+            ellipse at 50% 20%,
+            rgba(102, 204, 255, 0.45),
+            rgba(60, 170, 255, 0.22) 35%,
+            rgba(4, 6, 14, 0.94) 78%
+        );
+}
+
+@keyframes streakAuraCharge{
+    0%   { opacity: 0; transform: translate(-50%, -50%) scale(.65); }
+    35%  { opacity: .75; }
+    100% { opacity: .9; transform: translate(-50%, -50%) scale(1); }
+}
+@keyframes streakEnergyTravel{
+    0%   { stroke-dashoffset: 500; opacity: 0; }
+    8%   { opacity: 1; }
+    25%  { stroke-dashoffset: 390; }
+    50%  { stroke-dashoffset: 250; }
+    75%  { stroke-dashoffset: 105; }
+    92%  { stroke-dashoffset: 15; opacity: 1; }
+    100% { stroke-dashoffset: 0; opacity: .12; }
+}
+@keyframes streakEnergyFlicker{
+    0%, 12% { opacity: 1; }
+    14% { opacity: .35; }
+    17% { opacity: 1; }
+    36% { opacity: .7; }
+    39% { opacity: 1; }
+    57% { opacity: .4; }
+    60% { opacity: .95; }
+    78% { opacity: .65; }
+    100% { opacity: .1; }
+}
+@keyframes streakBoltArrival{
+    0%   { opacity: 0; transform: translate(-50%, -75%) scale(.35); filter: brightness(1); }
+    45%  { opacity: 1; transform: translate(-50%, -50%) scale(1.12); filter: brightness(1.8); }
+    70%  { transform: translate(-50%, -50%) scale(.96); filter: brightness(1.25); }
+    100% { opacity: 1; transform: translate(-50%, -50%) scale(1); filter: brightness(1); }
+}
+@keyframes streakBoltLeave{
+    0%   { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+    100% { opacity: 0; transform: translate(-50%, 25%) scale(.75); }
+}
+@keyframes streakSparkPulse{
+    0%, 100% { opacity: 0; transform: scale(.5) rotate(45deg); }
+    20% { opacity: .9; }
+    35% { opacity: .2; }
+    50% { opacity: 1; transform: scale(1.25) rotate(45deg); }
+    65% { opacity: .1; }
+}
+@keyframes streakTextPop{
+    0%   { opacity: 0; transform: translateY(-20px) scale(0.7); }
+    60%  { opacity: 1; transform: translateY(4px) scale(1.08); }
+    100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes streakTextLeave{
+    0%   { opacity: 1; transform: translateY(0) scale(1); }
+    100% { opacity: 0; transform: translateY(40vh) scale(0.9); }
+}
+@keyframes sparkSweep{
+    0%   { right: 110%; opacity: 0; }
+    8%   { opacity: 1; }
+    40%  { opacity: 1; }
+    50%  { opacity: 0.15; }
+    58%  { opacity: 1; }
+    100% { right: -15%; opacity: 0; }
+}
+
+
+/* ================================================================
+   §19. FLASH / LIGHTNING ACCENTS
+   ================================================================ */
+/* Quick full-screen blitz used on level-up */
+.flash{ position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 900; }
+@keyframes lightningFlash{
+    0%   { background-color: rgba(255,255,255,0); }
+    5%   { background-color: rgba(230,240,255,0.6); }
+    20%  { background-color: rgba(77,159,255,0.35); }
+    100% { background-color: rgba(255,255,255,0); }
+}
+.flash.lightning{ animation: lightningFlash 0.85s ease; }
+
+/* Card-level notification bolt — a small emoji/glyph that drops in
+   above a specific card (e.g. to call out an XP gain). */
+#card-lightning-container{
+    position: fixed;
+    inset: 0;
+    z-index: 9998;
+    pointer-events: none;
+    overflow: hidden;
+    opacity: 0;
+    visibility: hidden;
+    --card-bolt-color: #4fd8ff;
+}
+#card-lightning-container.active{ opacity: 1; visibility: visible; }
+
+#card-lightning-bolt{
+    position: absolute;
+    left: 50%;
+    top: -120px;
+    transform: translateX(-50%);
+    opacity: 0;
+    filter:
+        drop-shadow(0 0 6px #ffffff)
+        drop-shadow(0 0 16px var(--card-bolt-color))
+        drop-shadow(0 0 34px var(--card-bolt-color));
+}
+#card-lightning-container.active #card-lightning-bolt{
+    animation: emojiLightningDrop var(--card-bolt-duration, 600ms) cubic-bezier(.12,.75,.18,1) forwards;
+}
+@keyframes emojiLightningDrop{
+    0%   { top: -120px; opacity: 0; transform: translateX(-50%) scale(.8); }
+    10%  { opacity: 1; }
+    100% { top: calc(50% - 90px); opacity: 1; transform: translateX(-50%) scale(1); }
+}
+
+
+/* ================================================================
+   §20. AVATAR & SCREEN EFFECTS
+   ================================================================ */
+#avatar-frame{
+    width: 52px; height: 52px;
+    display: flex; align-items: center; justify-content: center;
+    clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+    border: 1px solid rgba(255,255,255,0.25);
+}
+#avatar-icon{
+    fill: #05070f; /* dark silhouette against the rank-colored gradient behind it */
+    filter: drop-shadow(0 0 4px rgba(255,255,255,0.5));
+}
+
+.avatar-charge{ animation: avatarCharge 1.9s ease forwards; }
+@keyframes avatarCharge{
+    0%{ transform: scale(1); filter: drop-shadow(0 0 12px #36cfff); }
+    60%{ transform: scale(1.03); filter: drop-shadow(0 0 25px #36cfff) drop-shadow(0 0 50px #5fdcff) drop-shadow(0 0 90px white); }
+    100%{ transform: scale(1); }
+}
+
+/* Freezes every animation on the page for a beat during rank-up */
+.time-stop *{ animation-play-state: paused !important; }
+
+.screen-shake{ animation: screenShake .45s linear; }
+@keyframes screenShake{
+    0%{transform:translate(0,0);} 10%{transform:translate(-7px,3px);} 20%{transform:translate(7px,-3px);}
+    30%{transform:translate(-6px,2px);} 40%{transform:translate(6px,-2px);} 50%{transform:translate(-4px,1px);}
+    60%{transform:translate(4px,-1px);} 70%{transform:translate(-3px,1px);} 80%{transform:translate(3px,-1px);}
+    100%{transform:translate(0,0);}
+}
+
+.card-shake-heavy{ animation: cardShakeHeavy .6s cubic-bezier(.2,.7,.2,1); }
+@keyframes cardShakeHeavy{
+    0%{transform:translate(0,0);} 8%{transform:translate(-14px,6px);} 16%{transform:translate(13px,-7px);}
+    24%{transform:translate(-11px,5px);} 32%{transform:translate(10px,-4px);} 42%{transform:translate(-7px,3px);}
+    55%{transform:translate(6px,-2px);} 70%{transform:translate(-3px,1px);} 85%{transform:translate(2px,-1px);}
+    100%{transform:translate(0,0);}
+}
+
+.avatar-impact{ animation: avatarImpact .6s ease; }
+@keyframes avatarImpact{
+    0%{ transform: scale(1); }
+    40%{ transform: scale(1.12); filter: drop-shadow(0 0 40px white) drop-shadow(0 0 80px #36cfff); }
+    100%{ transform: scale(1); }
+}
+
+#avatar-ring{ position: absolute; inset: -12px; border: 3px solid #8be9ff; border-radius: 50%; opacity: 0; pointer-events: none; }
+#avatar-ring.active{ animation: ringBlast .8s ease-out; }
+@keyframes ringBlast{
+    0%{ opacity: 1; transform: scale(.6); }
+    70%{ opacity: .9; }
+    100%{ opacity: 0; transform: scale(2.3); }
+}
+
+
+/* ================================================================
+   §21. TRAINING-COMPLETE BLAST
+   ================================================================ */
+.blast-piece{
+    position: fixed;
+    top: 50%; left: 50%;
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 4000;
+    opacity: 0;
+    animation: blastOut .8s cubic-bezier(.15,.8,.3,1) forwards;
+}
+@keyframes blastOut{
+    0%{ transform: translate(-50%,-50%) scale(0.3); opacity: 1; }
+    100%{ transform: translate(calc(-50% + var(--bx)), calc(-50% + var(--by))) scale(1); opacity: 0; }
+}
+
+.timer-punch{ animation: timerPunch .5s cubic-bezier(.34,1.56,.64,1); }
+@keyframes timerPunch{
+    0%{ transform: scale(0.92); }
+    50%{ transform: scale(1.06); }
+    100%{ transform: scale(1); }
+}
+
+
+/* ================================================================
+   §22. FOCUS MODE — TRIGGER BUTTON
+   ================================================================ */
+#focusButton{
+    position: fixed;
+    bottom: 16px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 8px 18px;
+    background: linear-gradient(180deg, #3a4256, #12151e);
+    border: 1px solid rgba(200,211,230,0.35);
+    border-radius: 10px;
+    color: var(--silver);
+    font-family: 'Orbitron', sans-serif;
+    font-size: 0.82rem;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    cursor: pointer;
+    z-index: 500;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.08), 0 0 14px rgba(180,195,220,.15);
+    transition: transform .22s ease, border-color .22s ease, box-shadow .22s ease, color .22s ease;
+}
+#focusButton:hover{
+    transform: translateX(-50%) translateY(-2px);
+    border-color: rgba(200,211,230,.75);
+    color: #fff;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.1), 0 0 22px rgba(200,211,230,.35), 0 0 40px rgba(102,204,255,.15);
+}
+#focusButton:active{ transform: translateX(-50%) scale(.98); }
+
+.focus-btn-icon{ font-size: 1rem; color: var(--cyan); filter: drop-shadow(0 0 6px rgba(102,204,255,0.8)); }
+
+
+/* ================================================================
+   §23. FOCUS MODE — SETUP OVERLAY
+   ================================================================ */
+.focus-overlay{
+    position: fixed;
+    inset: 0;
+    background: radial-gradient(circle at 50% 38%, rgba(77,159,255,.14), rgba(3,5,12,.94) 68%);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 999;
+    padding: 20px;
+    opacity: 0;
+    transition: opacity .28s ease;
+}
+.focus-overlay.active{ opacity: 1; }
+
+.focus-container{
+    position: relative;
+    width: 100%;
+    max-width: 460px;
+    padding: 32px 26px 28px;
+    text-align: center;
+    color: var(--text);
+    transform: scale(0.92);
+    opacity: 0;
+    transition: transform .3s cubic-bezier(.2,.9,.3,1.2), opacity .28s ease;
+}
+.focus-overlay.active .focus-container{ transform: scale(1); opacity: 1; }
+
+.focus-close{
+    position: absolute;
+    top: 14px; right: 14px;
+    width: 28px; height: 28px;
+    border-radius: 6px;
+    background: transparent;
+    border: 1px solid var(--line);
+    color: var(--text-dim);
+    font-size: 12px;
+    cursor: pointer;
+    transition: border-color .2s ease, color .2s ease;
+}
+.focus-close:hover{ border-color: var(--danger); color: var(--danger); }
+
+.focus-container h1{
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 700;
+    font-size: 22px;
+    letter-spacing: 5px;
+    color: var(--cyan);
+    text-shadow: 0 0 20px rgba(102,204,255,0.55);
+    margin: 0 0 6px;
+    text-transform: uppercase;
+}
+.focus-container p{ color: var(--text-dim); font-size: 13px; text-transform: uppercase; letter-spacing: 1.5px; margin: 0 0 26px; }
+.focus-container h3{
+    font-family: 'Orbitron', sans-serif;
+    font-size: 10.5px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    text-align: left;
+    margin: 0 0 10px;
+}
+
+.skill-select, .time-options{ display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 20px; }
+.skill-select-empty{ font-size: 13px; color: var(--text-dim); font-style: italic; text-align: left; margin: 0; }
+
+.skill-btn, .time-btn, .break-preset-btn{
+    flex: 1 1 auto;
+    min-width: 90px;
+    padding: 9px 12px;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(102,204,255,0.3);
+    border-radius: var(--radius-sm);
+    color: var(--text);
+    font-family: 'Rajdhani', sans-serif;
+    font-weight: 600;
+    font-size: 13px;
+    letter-spacing: 0.5px;
+    cursor: pointer;
+    transition: border-color .2s ease, color .2s ease, background .2s ease, transform .15s ease;
+}
+.skill-btn:hover, .time-btn:hover, .break-preset-btn:hover{ border-color: var(--line-bright); color: var(--cyan); transform: translateY(-1px); }
+.skill-btn.selected, .time-btn.selected, .break-preset-btn.selected{
+    background: var(--accent-soft);
+    border-color: var(--accent);
+    color: #fff;
+    box-shadow: 0 0 14px rgba(77,159,255,0.4);
+}
+
+.custom-time-row{ display: none; text-align: left; margin: -6px 0 22px; }
+.custom-time-row input{ margin-bottom: 10px; }
+.custom-time-inputs, .hm-input-row{ display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+.custom-time-inputs input, .hm-input-row input{ flex: 1; text-align: center; }
+.custom-time-inputs span, .hm-input-row span{ color: var(--text-dim); font-family: 'Orbitron', sans-serif; font-size: 13px; }
+
+#startFocus{
+    width: 100%;
+    padding: 13px;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 12.5px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    background: linear-gradient(135deg, var(--accent-soft), var(--accent));
+    border: 1px solid var(--accent);
+    color: #fff;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: transform .15s ease, box-shadow .2s ease;
+}
+#startFocus:hover{ box-shadow: 0 0 20px rgba(77,159,255,0.5); transform: translateY(-1px); }
+#startFocus:active{ transform: scale(0.98); }
+#startFocus:disabled{ opacity: .4; cursor: not-allowed; box-shadow: none; transform: none; }
+
+
+/* ================================================================
+   §24. FOCUS MODE — BREAK ROWS
+   ================================================================ */
+#breakList{ display: flex; flex-direction: column; gap: 10px; margin-bottom: 14px; }
+.break-row{
+    display: flex;
+    align-items: flex-end;
+    gap: 10px;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    padding: 12px;
+}
+.break-row-fields{ display: flex; gap: 10px; flex: 1; }
+.break-field{ flex: 1; text-align: left; }
+.break-field label{
+    display: block;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 9px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-bottom: 6px;
+}
+.break-field input{ padding: 8px 10px; font-size: 13px; }
+.break-remove-btn{
+    flex: 0 0 auto;
+    width: 30px; height: 30px;
+    background: transparent;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    color: var(--text-dim);
+    cursor: pointer;
+    transition: border-color .2s ease, color .2s ease;
+}
+.break-remove-btn:hover{ border-color: var(--danger); color: var(--danger); }
+
+
+/* ================================================================
+   §25. FOCUS MODE — ACTIVE SESSION (full-page timer)
+   ================================================================ */
+.active-focus-overlay{
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 2000;
+    background: radial-gradient(circle at 50% 40%, rgba(77,159,255,.16), transparent 60%), var(--bg);
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity .32s ease;
+}
+.active-focus-overlay.active{ opacity: 1; }
+
+.active-focus-content{
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    transform: scale(0.9);
+    opacity: 0;
+    transition: transform .35s cubic-bezier(.2,.9,.3,1.2), opacity .3s ease;
+}
+.active-focus-overlay.active .active-focus-content{ transform: scale(1); opacity: 1; }
+
+.exit-focus-btn{
+    position: absolute;
+    top: 18px; left: 14px;
+    padding: 10px 18px;
+    background: rgba(227,82,34,0.12);
+    border: 1px solid var(--danger);
+    color: var(--danger);
+    font-family: 'Orbitron', sans-serif;
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: background .2s ease, box-shadow .2s ease, transform .15s ease;
+}
+.exit-focus-btn:hover{ background: rgba(227,82,34,0.24); box-shadow: 0 0 16px rgba(227,82,34,.4); transform: translateY(-1px); }
+
+#active-focus-label{
+    font-family: 'Orbitron', sans-serif;
+    font-size: 16px;
+    letter-spacing: 4px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    margin-bottom: 18px;
+}
+#currentSkill{
+    font-family: 'Orbitron', sans-serif;
+    font-size: 20px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--cyan);
+    text-shadow: 0 0 14px rgba(102,204,255,.5);
+    margin-bottom: 26px;
+}
+#timer{
+    font-family: 'Orbitron', sans-serif;
+    font-size: 64px;
+    font-weight: 700;
+    color: #fff;
+    text-shadow: 0 0 30px rgba(102,204,255,.55), 0 0 60px rgba(102,204,255,.25);
+    letter-spacing: 2px;
+    margin-bottom: 90px;
+}
+.active-focus-controls{ display: flex; justify-content: center; transform: translateY(-50px); }
+#pauseFocus{ min-width: 170px; }
+
+/* Break-time re-theme: same layout, gold instead of cyan */
+#activeFocus.break-mode #timer{ color: var(--gold); text-shadow: 0 0 30px rgba(255,200,87,.55), 0 0 60px rgba(255,200,87,.25); }
+#activeFocus.break-mode #currentSkill{ color: var(--gold); text-shadow: 0 0 14px rgba(255,200,87,.5); }
+
+#phase-countdown{
+    position: absolute;
+    top: 30px; right: 10px;
+    display: none;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 11px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--cyan);
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(102,204,255,0.35);
+    padding: 8px 14px;
+    border-radius: var(--radius-sm);
+    text-shadow: 0 0 8px rgba(102,204,255,0.5);
+}
+#phase-countdown.countdown-break{ color: var(--gold); border-color: rgba(255,200,87,0.4); text-shadow: 0 0 8px rgba(255,200,87,0.5); }
+
+
+/* ================================================================
+   §26. AMBIENT PARTICLES
+   ================================================================ */
+#particles{ position: fixed; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; }
+.ember{ position: absolute; bottom: -10px; border-radius: 50%; opacity: 0; animation: emberRise linear infinite; }
+#particles.paused .ember{ animation-play-state: paused; }
+@keyframes emberRise{
+    0%   { transform: translateY(0) translateX(0); opacity: 0; }
+    10%  { opacity: 0.55; }
+    90%  { opacity: 0.25; }
+    100% { transform: translateY(-110vh) translateX(24px); opacity: 0; }
+}
+
+/* Level-up burst streaks: slow for the first ~40% of the rise, quicker
+   through ~65%, then a fast flash to the top for the final stretch —
+   each keyframe's animation-timing-function controls the pace into
+   the NEXT keyframe, giving the three-stage acceleration feel. */
+.burst-ember{ animation-name: emberBurstRise; animation-iteration-count: 1; animation-fill-mode: forwards; }
+@keyframes emberBurstRise{
+    0%   { transform: translateY(0) scaleY(1) translateX(0); opacity: 0; filter: brightness(1); animation-timing-function: ease-out; }
+    8%   { transform: translateY(-2vh) scaleY(1.3) translateX(0); opacity: 1; filter: brightness(1); animation-timing-function: ease-in; }
+    40%  { transform: translateY(-34vh) scaleY(2.6) translateX(6px); opacity: 1; filter: brightness(1.05); animation-timing-function: cubic-bezier(.4,.05,.2,1); }
+    65%  { transform: translateY(-68vh) scaleY(3.8) translateX(12px); opacity: 1; filter: brightness(1.3); animation-timing-function: cubic-bezier(.1,.7,.15,1); }
+    92%  { transform: translateY(-130vh) scaleY(5.2) translateX(20px); opacity: 1; filter: brightness(2); }
+    100% { transform: translateY(-150vh) scaleY(5.2) translateX(22px); opacity: 0; filter: brightness(2.4); }
+}
+
+/* Shared shimmer utility — used by #title, .quest-available .quest-label, .rank-S */
+@keyframes shimmer{
+    0%   { background-position: 200% center; }
+    100% { background-position: -200% center; }
+}
+
+
+/* ================================================================
+   §27. RESPONSIVE + REDUCED MOTION
+   ================================================================ */
+@media (max-width: 560px){
+    #title{ font-size: 28px; letter-spacing: 2px; margin-bottom: 60px; }
+    .container{ padding: 150px 0 60px; } /* clears the quest+hud stack up top, and adds real breathing room before the cards start */
+    #focusButton{ bottom: 12px; padding: 6px 14px; font-size: 0.75rem; gap: 6px; left: 200px; }
+    #quest{ top: 13px; width: 140px; padding: 10px; left: 201px; }
+    /* Icon row — directly below the quest button, right-aligned */
+ 
+    #growthBtn{ display: none; } /* dropped on mobile for now */
+#hud-right{
+    top: 20px;   /* clears the quest button, which sits at top:13px */
+    right: 8px;
+    gap: 4px;
+}
+#hud-right #streak,
+#hud-right #undo-btn,
+#hud-right #redo-btn{
+    position: relative;
+    top: 0px;
+    width: 36px;
+    height: 26px;
+    padding: 3px 4px;
+    font-size: 9px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+#hud-right .hud-label{ display: none; } /* icon only on mobile — this is what was making the buttons wide */
+#hud-right .hud-icon{ font-size: 13px; }
+#mute-toggle{left:20px; bottom:10px;}
+    #log-fab{ width: 54px; height: 54px; font-size: 26px; right:20px; bottom: 10px; }
+    #fab-label{ display: none; }
+    .focus-container{ padding: 34px 20px 26px; }
+    #timer{ font-size: 56px; }
+    #currentSkill{ font-size: 16px; }
+    /* Cards — original layout, just sized to fit two per row */
+    #log{ gap: 12px; padding: 0 4px; }
+    #log .card{
+        flex: 1 1 calc(50% - 6px);
+        max-width: calc(50% - 6px);
+        min-width: 0;
+    }
+    #log-fab.fab-available + #fab-label{ opacity: 1; }
+    .card{ padding: 18px 14px 16px; }
+    .card-icon{ width: 38px; height: 38px; font-size: 15px; }
+    .title{ font-size: 12px; }
+    .level-pill{ font-size: 9px; padding: 2px 8px; }
+    .xp{ font-size: 10px; }
+    .hours{ font-size: 9px; }
+    #log .card:only-child{
+    flex: 1 1 100%;
+    max-width: 100%;
+}
+}
+
+@media (prefers-reduced-motion: reduce){
+    *, *::before, *::after{
+        animation-duration: 0.001ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.001ms !important;
+        scroll-behavior: auto !important;
+    }
+}

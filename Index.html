@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#080b14">
+    <title>Level Up</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+    <div id="particles"></div>
+
+    <div class="flash"></div>
+    <div class="card-flash"></div>
+    
+<!-- ============================================================
+     LEVEL-UP JAGGED SKY LIGHTNING
+     ============================================================ -->
+<div id="card-lightning-container" aria-hidden="true">
+    <svg id="card-lightning-bolt" viewBox="0 0 100 180" width="130" height="180">
+        <defs>
+            <linearGradient id="boltGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stop-color="#ffffff"/>
+                <stop offset="35%" stop-color="var(--card-bolt-color)"/>
+                <stop offset="100%" stop-color="var(--card-bolt-color)"/>
+            </linearGradient>
+        </defs>
+        <polygon
+            points="58,0 22,100 46,100 40,180 82,72 56,72"
+            fill="url(#boltGradient)"
+        />
+    </svg>
+</div>
+
+
+
+    <div id="confetti-layer"></div>
+
+    <div id="blast-layer"></div>
+
+<div id="complete-overlay" class="focus-overlay">
+    <div class="focus-container system-window">
+        <div class="scan-line"></div>
+        <h1>Training Complete</h1>
+        <p>Trained <strong id="complete-skill"></strong> for <span id="complete-time"></span></p>
+        <div class="modal-actions">
+            <button type="button" id="complete-home" class="btn-ghost">Return Home</button>
+            <button type="button" id="complete-again" class="btn-primary">Train Again</button>
+        </div>
+    </div>
+</div>
+    <!-- ============ LEVEL UP CELEBRATION ============ -->
+   <div id="levelup-overlay">
+    <div id="levelup-content">
+        <div class="levelup-ring" style="animation-delay:0s"></div>
+        <div class="levelup-ring" style="animation-delay:0.15s"></div>
+        <div class="levelup-ring" style="animation-delay:0.3s"></div>
+
+        <div id="levelup-eyebrow">RANK ASCENSION</div>
+
+        <div id="levelup-emblem">
+            <svg viewBox="0 0 140 140" width="250" height="200" aria-hidden="true">
+                <circle cx="70" cy="70" r="62" class="emblem-ring-outer"/>
+                <circle cx="70" cy="70" r="50" class="emblem-ring-inner"/>
+                <path d="M70 12.5 L83.8 52.75 L125.2 52.75 L91.85 82.9 L104.5 118.3 L70 93 L35.5 118.3 L48.15 82.9 L14.8 52.75 L56.2 52.75 Z" class="emblem-star"/>
+                <circle cx="70" cy="70" r="16" class="emblem-seal"/>
+                <text id="levelup-emblem-letter" x="70" y="76" text-anchor="middle" class="emblem-letter">S</text>
+            </svg>
+        </div>
+
+        <div id="levelup-label">LEVEL UP</div>
+        <div id="levelup-level">1</div>
+        <div id="levelup-rank">RANK UP</div>
+
+        <div id="levelup-tendrils">
+            <span></span><span></span><span></span><span></span><span></span>
+        </div>
+        <button type="button" id="levelup-continue-btn">Press Continue</button>
+    </div>
+</div>
+
+
+<!-- ========================================================
+     STREAK CONTINUED — CHARGED ENERGY FIELD
+     Everything for the streak notification MUST stay inside
+     this overlay so it is invisible until the streak fires.
+     ======================================================== -->
+
+<div id="streak-notify-overlay" class="modal-overlay streak-strike-overlay">
+
+    <div class="streak-energy-field" aria-hidden="true">
+
+        <!-- Ambient navy aura -->
+        <div class="streak-energy-aura"></div>
+
+        <!-- L -> N : TOP LIGHTNING -->
+        <svg class="streak-energy-svg streak-energy-top"
+             viewBox="0 0 100 100"
+             preserveAspectRatio="none">
+
+            <path
+                class="streak-energy-path streak-energy-path-glow"
+                d="M -5 16
+                   L 12 13
+                   L 19 19
+                   L 29 15
+                   L 38 23
+                   L 48 20
+                   L 57 29
+                   L 66 27
+                   L 75 36
+                   L 84 32
+                   L 94 43
+                   L 105 49" />
+
+            <path
+                class="streak-energy-path streak-energy-path-main"
+                d="M -5 16
+                   L 12 13
+                   L 19 19
+                   L 29 15
+                   L 38 23
+                   L 48 20
+                   L 57 29
+                   L 66 27
+                   L 75 36
+                   L 84 32
+                   L 94 43
+                   L 105 49" />
+
+        </svg>
+
+        <!-- G -> N : BOTTOM LIGHTNING -->
+        <svg class="streak-energy-svg streak-energy-bottom"
+             viewBox="0 0 100 100"
+             preserveAspectRatio="none">
+
+            <path
+                class="streak-energy-path streak-energy-path-glow"
+                d="M -5 82
+                   L 12 78
+                   L 21 84
+                   L 30 76
+                   L 40 81
+                   L 50 70
+                   L 59 74
+                   L 68 63
+                   L 78 67
+                   L 88 56
+                   L 105 49" />
+
+            <path
+                class="streak-energy-path streak-energy-path-main"
+                d="M -5 82
+                   L 12 78
+                   L 21 84
+                   L 30 76
+                   L 40 81
+                   L 50 70
+                   L 59 74
+                   L 68 63
+                   L 78 67
+                   L 88 56
+                   L 105 49" />
+
+        </svg>
+
+        <!-- Small random electrical branches -->
+        <div class="streak-energy-spark streak-spark-1"></div>
+        <div class="streak-energy-spark streak-spark-2"></div>
+        <div class="streak-energy-spark streak-spark-3"></div>
+
+    </div>
+
+    <!-- Streak bolt -->
+    <div id="streak-lightning" aria-hidden="true">
+        <div class="streak-bolt-core"></div>
+        <div class="streak-bolt-glow"></div>
+    </div>
+
+    <!-- Streak text -->
+    <div class="streak-strike-content">
+
+        <div class="streak-strike-eyebrow">
+            STREAK CONTINUED
+        </div>
+
+        <div class="streak-strike-title">
+            <span>DAY</span>
+            <strong id="streak-continue-count">0</strong>
+        </div>
+
+        <div class="streak-text-sparks" aria-hidden="true">
+            <span class="streak-text-spark"></span>
+            <span class="streak-text-spark"></span>
+        </div>
+
+    </div>
+
+</div>
+
+
+
+<!-- ============ HUD CORNER CONTROLS ============ -->
+
+    <!-- ============ HUD CORNER CONTROLS ============ -->
+    <div id="hud-right">
+    
+    <div id="streak" class="hud-btn">
+        <span id="streak-icon" aria-hidden="true">⚡</span>
+        <span id="streak-count">0</span>
+    </div>
+  <button type="button" id="undo-btn" class="hud-btn"><span class="hud-icon">↺</span><span class="hud-label">Undo</span></button>
+<button type="button" id="redo-btn" class="hud-btn"><span class="hud-icon">↻</span><span class="hud-label">Redo</span></button>
+</div>
+<button type="button" id="mute-toggle" aria-label="Mute sound">🔊</button>
+
+</div>
+
+    <!-- ============ QUEST MODAL ============ -->
+
+<button type="button" id="quest">
+    <span class="quest-badge"></span>
+    <span class="quest-label">Daily Quests</span>
+</button>
+
+
+
+  <div id="quest-modal" class="modal-overlay">
+<div id="quest-card" class="notify-window quest-window">
+    <div class="quest-header">
+        <div class="notify-icon">!</div>
+        <div class="notify-title-box">QUEST INFO</div>
+    </div>
+    <p class="quest-arrival-line">[Daily Quest has arrived.]</p>
+    <div class="quest-goal-heading">GOAL</div>
+
+    <!-- STATE 1: nothing chosen yet -->
+    <div id="quest-choice">
+        <p>How do you want today's quests set up?</p>
+        <div class="modal-actions">
+            <button type="button" id="quest-choose-manual" class="btn-primary">Manual</button>
+            <button type="button" id="quest-choose-auto" class="btn-primary">Automatic</button>
+        </div>
+    </div>
+
+    <!-- rest of #quest-body / #quest-list stays exactly as it was -->
+
+        <!-- STATE 2 & 3: quests exist (manual or auto) -->
+        <div id="quest-body" style="display:none;">
+            <ul id="quest-list"></ul>
+            
+
+            <!-- only shown when mode === 'manual' -->
+            <div id="quest-manual-controls" style="display:none;">
+
+    <!-- Step 1 -->
+    <button type="button"
+            id="quest-show-builder"
+            class="btn-primary"
+            >
+        + Add Quest
+    </button>
+
+    <!-- Step 2 (hidden initially) -->
+    <div id="quest-builder" style="display:none;">
+
+        <div class="field-group">
+            <label>Activity</label>
+            <input type="text" id="quest-activity-input">
+            <div id="quest-activity-chips" class="chip-row"></div>
+        </div>
+
+     <div class="field-group">
+    <label>Quest Type</label>
+    <div class="modal-actions" style="justify-content:flex-start;">
+        <button type="button" id="quest-type-timed" class="btn-primary">Timed</button>
+        <button type="button" id="quest-type-task" class="btn-ghost">One-Time Task</button>
+    </div>
+</div>
+<div class="field-group" id="quest-hours-group">
+    <label>How much time?</label>
+    <div class="hm-input-row">
+        <input type="number" placeholder="Hours" id="quest-hours-h">
+        <span>:</span>
+        <input type="number" placeholder="Minutes" id="quest-hours-m">
+    </div>
+</div>
+
+        <button type="button"
+                id="quest-add-btn"
+                class="btn-primary"
+                style="width:100%;">
+            Save Quest
+        </button>
+
+    </div>
+
+</div>
+
+            <!-- only shown when mode === 'auto' -->
+            <div id="quest-auto-controls" style="display:none;">
+                <button type="button" id="quest-reroll-btn" class="btn-ghost quest-refresh-btn">⟳</button>
+            </div>
+        </div>
+
+        <div class="modal-actions">
+            <button type="button" id="quest-close-btn" class="btn-ghost">Close</button>
+            <div id="quest-pager" class="quest-pager"></div>
+        </div>
+    </div>
+</div>
+
+    <!-- ============ LOG ACTIVITY MODAL ============ -->
+    <div id="log-modal" class="modal-overlay">
+        <div id="log-card" class="system-window">
+            <div class="scan-line"></div>
+            <h2>Log Activity</h2>
+            <form id="log-form">
+                <div class="field-group">
+                    <label for="activity-input">Activity</label>
+                    <input type="text" id="activity-input" autocomplete="off" placeholder="eg. Coding or studying">
+                    <div id="activity-chips" class="chip-row"></div>
+                </div>
+                <div class="field-group">
+                    <label for="hours-input-h">How much time?</label>
+                    <div class="hm-input-row">
+                        <input type="number" id="hours-input-h" autocomplete="off" min="0" step="1" placeholder="Hours">
+                        <span>:</span>
+                        <input type="number" id="hours-input-m" autocomplete="off" min="0" max="59" step="1" placeholder="Minutes">
+                    </div>
+                    <div class="chip-row">
+                     <button type="button" class="chip hours-chip" data-hours="0.25">15m</button>
+                     <button type="button" class="chip hours-chip" data-hours="0.5">30m</button>
+                    <button type="button" class="chip hours-chip" data-hours="1">1h</button>
+                  <button type="button" class="chip hours-chip" data-hours="2">2h</button>
+                    <button type="button" class="chip hours-chip" data-hours="3">3h</button>
+                    <button type="button" class="chip hours-chip clear-chip" data-clear="true">Clear</button>
+                    </div>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" id="log-cancel" class="btn-ghost">Cancel</button>
+                    <button type="submit" id="log-submit" class="btn-primary">Log Progress</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+ 
+    <!-- ============ DELETE CONFIRM MODAL ============ -->
+    <div id="modal" class="modal-overlay">
+        <div id="modal-card" class="modal-card-simple">
+            <p>Delete this skill? Your progress will be lost.</p>
+            <div class="modal-actions">
+                <button type="button" id="confirm-yes" class="btn-ghost btn-danger">Yes</button>
+                <button type="button" id="confirm-no" class="btn-ghost btn-safe">No</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============ EXIT FOCUS SESSION CONFIRM ============ -->
+    <div id="exit-focus-modal" class="modal-overlay">
+        <div class="modal-card-simple">
+            <p>Exit this focus session? Your time so far will still be logged, but the timer will stop.</p>
+            <div class="modal-actions">
+                <button type="button" id="exit-confirm-yes" class="btn-ghost btn-danger">Exit Session</button>
+                <button type="button" id="exit-confirm-no" class="btn-ghost btn-safe">Stay Focused</button>
+            </div>
+        </div>
+    </div>
+
+    <!--Modal for adding hours on skill card-->
+    <div id="quickadd-modal" class="modal-overlay">
+    <div class="system-window">
+
+        <h2>Add Training</h2>
+
+     <h3 id="quickadd-title"></h3>
+
+        <div class="hm-input-row">
+            <input type="number" id="quickadd-hours-h" min="0" step="1" placeholder="Hours">
+            <span>:</span>
+            <input type="number" id="quickadd-hours-m" min="0" max="59" step="1" placeholder="Minutes">
+        </div>
+
+        <div class="chip-row">
+          <button type="button" class="chip qa-hour" data-hours="0.25">15m</button>
+<button type="button" class="chip qa-hour" data-hours="0.5">30m</button>
+<button type="button" class="chip qa-hour" data-hours="1">1h</button>
+<button type="button" class="chip qa-hour" data-hours="2">2h</button>
+        </div>
+
+        <div class="modal-actions">
+            <button id="quickadd-cancel" class="btn-ghost">
+                Cancel
+            </button>
+
+            <button id="quickadd-confirm" class="btn-primary">
+                Add Hours
+            </button>
+        </div>
+
+    </div>
+</div>
+
+ <!-- ============ CHARACTER PROFILE ============ -->
+<header id="top-bar">
+
+<div id="avatar-ring"></div>
+        <section id="profile" class="system-window">
+            <div class="scan-line"></div>
+            <div id="avatar-wrap">
+                <div id="avatar-frame">
+    <svg viewBox="0 0 24 24" id="avatar-icon" width="26" height="26">
+        <path d="M12 2C9 2 7 4.5 7 7.5c0 2 1 3.5 2.2 4.5C6 13.5 4 16.5 4 20v1h16v-1c0-3.5-2-6.5-5.2-8C16 11 17 9.5 17 7.5 17 4.5 15 2 12 2z"/>
+    </svg>
+</div>
+ <button type="button" id="theme-toggle" aria-label="Toggle light and dark mode">🌙</button>
+            </div>
+            <div id="profile-info">
+                <div id="name-row">
+                    <span id="char-name" contenteditable="true" spellcheck="false">Hunter</span>
+                    <span id="rank-badge">E-RANK</span>
+                </div>
+                <div id="level-text">LEVEL 1</div>
+                <div class="xp-bar-container"><div class="xp-bar" id="xp-bar"></div></div>
+                <div id="xp-caption">0 / 10 HRS TO NEXT LEVEL</div>
+            </div>
+        </section>
+
+
+
+
+    <div class="container">
+        <h1 id="title">Level Up!</h1>
+
+
+
+        <ul id="log"></ul>
+    </div>
+
+    <button type="button" id="log-fab" aria-label="Log activity">+</button>
+    <span id="fab-label">Log Activity</span>
+
+
+    <!-- ============ FOCUS MODE ============ -->
+    <button type="button" id="focusButton">
+        <span class="focus-btn-icon" aria-hidden="true">⌁</span>
+        Enter Focus Mode
+    </button>
+
+    <div id="focusOverlay" class="focus-overlay">
+        <div class="focus-container system-window">
+            <div class="scan-line"></div>
+            <button type="button" id="focusCancel" class="focus-close" aria-label="Close focus mode">✕</button>
+
+            <h1>Focus Mode</h1>
+            <p>Begin Today's Training</p>
+
+            <h3>Select Skill</h3>
+            <div class="skill-select" id="skillSelect">
+                <!-- populated dynamically from your logged skills -->
+            </div>
+
+            <h3>Session Length</h3>
+            <div class="time-options">
+                <button type="button" class="time-btn" data-hours="1">1 Hour</button>
+                <button type="button" class="time-btn" id="dailyQuestTimeBtn" data-hours="2">Daily Quest</button>
+                <button type="button" class="time-btn" id="customTimeBtn" data-custom="true">Custom</button>
+            </div>
+            <div class="custom-time-row" id="customTimeRow">
+                <div class="custom-time-inputs">
+    <input type="number" id="customHoursInput" min="0" step="1" placeholder="Hours">
+    <span>:</span>
+    <input type="number" id="customMinutesInput" min="0" max="59" step="1" placeholder="Minutes">
+</div>
+                <div class="chip-row">
+                    <button type="button" class="chip time-chip" data-hours="0.25">15m</button>
+                    <button type="button" class="chip time-chip" data-hours="0.5">30m</button>
+                    <button type="button" class="chip time-chip" data-hours="0.75">45m</button>
+                    <button type="button" class="chip time-chip" data-hours="1">1h</button>
+                    <button type="button" class="chip time-chip" data-hours="1.5">1.5h</button>
+                    <button type="button" class="chip time-chip" data-hours="3">3h</button>
+                </div>
+            </div>
+
+  <h3>Breaks</h3>
+<div class="time-options" id="breakPresets">
+    <button type="button" class="break-preset-btn selected" data-preset="none">No Breaks</button>
+    <button type="button" class="break-preset-btn" data-preset="pomodoro">Pomodoro (25/5)</button>
+    <button type="button" class="break-preset-btn" data-preset="50-10">50 / 10</button>
+</div>
+
+<div id="breakList"></div>
+<button type="button" id="addBreakBtn" class="btn-ghost" style="width:100%; margin-bottom:20px;">+ Add Custom Break</button>
+
+            <button type="button" id="startFocus">Begin Training</button>
+        </div>
+    </div>
+
+    <div id="activeFocus" class="active-focus-overlay">
+        <button type="button" id="exitFocus" class="exit-focus-btn">Exit</button> <div id="phase-countdown"></div>
+        <div class="active-focus-content">
+            <div id="active-focus-label">In Progress</div>
+            <h2 id="currentSkill">Programming</h2>
+            <div id="timer">1:00:00</div>
+            <div class="active-focus-controls">
+                <button type="button" id="pauseFocus" class="btn-ghost">Pause</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
