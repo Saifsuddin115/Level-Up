@@ -42,10 +42,12 @@ const QUEST_HOURS_GOAL = 2;      // hours required to complete ONE daily quest (
 const QUEST_COUNT      = 3;      // how many activities show up as daily quests in "Automatic" mode
 const QUEST_PAGE_SIZE  = 3;      // how many quest rows are shown per page in the quest modal before pagination kicks in
 const BURST_RISE_MS    = 3000;  // duration (ms) of the particle-rise animation before a level-up/rank-up overlay actually opens — all the setTimeout delays in the celebration functions are offsets from this number
+const DAILY_HOURS_CAP  = 16;    // hard ceiling on total hours loggable across ALL activities combined, per calendar day
 const CARD_BOLT_DROP_MS    = 600;   // bolt drop speed once particles finish rising
 const CARD_TEXT_DELAY_MS   = 150;   // buffer after impact before LEVEL UP text shows
 const CARD_TEXT_VISIBLE_MS = 2000;  // LEVEL UP text stays up 2s
-const CARD_BOLT_EXTRA_MS   = 1000;  // bolt lingers 1s after the text is gone
+const CARD_BOLT_EXTRA_MS   = 1000; 
+ // bolt lingers 1s after the text is gone
 // Hunter ranks by CHARACTER level (NOT skill level — skill level drives
 // the separate CARD_TIERS system further down). This array only stores
 // the LEVEL THRESHOLDS and NAMES for each rank. It intentionally does
@@ -1511,11 +1513,23 @@ function playHoverTick() {
    character level), streak bookkeeping, quest progress, persistence,
    and triggering the right celebration.
    ================================================================ */
+   let lastLogError = null; // { type: 'cap' | 'invalid', message } — set right before logProgress returns false, so whichever modal called it knows WHY, and can shake/message the right input instead of guessing
+
 function logProgress(activityRaw, hoursRaw) {
+    lastLogError = null;
     const activity = (activityRaw || '').trim();
-    const hours = parseFloat(hoursRaw);
+    let hours = parseFloat(hoursRaw);
     if (!activity || !isFinite(hours) || hours <= 0) return false; // caller (e.g. the log form's submit handler) uses this false return to know validation failed and should show an input error instead of closing the modal
 
+    const loggedToday = Object.values(dailyLog.hours).reduce((sum, h) => sum + h, 0);
+    const remainingToday = round2(DAILY_HOURS_CAP - loggedToday);
+    if (remainingToday <= 0) {
+        lastLogError = { type: 'cap', message: `Daily cap reached — try again tomorrow` };
+        return false;
+    }
+    if (hours > remainingToday) {
+        hours = remainingToday;
+    }
     // Snapshot the ENTIRE relevant state BEFORE anything below changes
     // it, so the Undo button can restore this exact moment if the user
     // wants to take it back. See section 12b for what this captures.
@@ -2295,6 +2309,19 @@ function flashInputError(input) {
     input.classList.add('input-error');
     setTimeout(() => input.classList.remove('input-error'), 500);
 }
+function showFieldError(boxEl, message) {
+    flashInputError(boxEl);
+    let msg = boxEl.nextElementSibling;
+    if (!msg || !msg.classList.contains('input-error-msg')) {
+        msg = document.createElement('div');
+        msg.className = 'input-error-msg';
+        boxEl.insertAdjacentElement('afterend', msg);
+    }
+    msg.textContent = message;
+    clearTimeout(msg._hideTimer);
+    msg.classList.add('show');
+    msg._hideTimer = setTimeout(() => msg.classList.remove('show'), 2400);
+}
 
 
 
@@ -2340,8 +2367,12 @@ function openQuickAddModal(activity) {
 function confirmQuickAdd() {
     const hours = readHoursMinutes(el.quickaddHoursH, el.quickaddHoursM);
     if (hours > 0) {
-        logProgress(quickAddSkill, hours); // funnels through the exact same core logging path as every other way of adding time
-        closeModal(el.quickaddModal);
+        const ok = logProgress(quickAddSkill, hours); // funnels through the exact same core logging path as every other way of adding time
+        if (ok) {
+            closeModal(el.quickaddModal);
+        } else if (lastLogError && lastLogError.type === 'cap') {
+            showFieldError(el.quickaddHoursH.closest('.hm-input-row'), lastLogError.message);
+        }
     } else {
         flashInputError(el.quickaddHoursH);
     }
@@ -2731,9 +2762,6 @@ el.questHoursGroup.style.display = 'block';
     });
 
    
-    // --- Log Activity modal ---------------------------------------------------
-    el.logFab.addEventListener('click', () => openLogModal(''));
-    el.logCancel.addEventListener('click', closeLogModal);
     el.logForm.addEventListener('submit', (e) => {
         e.preventDefault(); // stop the browser's default form-submit page reload
         const totalHours = readHoursMinutes(el.hoursInputH, el.hoursInputM);
@@ -2743,6 +2771,8 @@ el.questHoursGroup.style.display = 'block';
             el.hoursInputH.value = '';
             el.hoursInputM.value = '';
             closeLogModal();
+        } else if (lastLogError && lastLogError.type === 'cap') {
+            showFieldError(el.hoursInputH.closest('.hm-input-row'), lastLogError.message);
         } else {
             // Flash whichever field is actually the problem: if an
             // activity name WAS typed, the hours must be what's
