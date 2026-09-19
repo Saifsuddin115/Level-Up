@@ -488,13 +488,13 @@ body.pre-log #mute-toggle{
     position: fixed;
     top: 8px;
     left: 1px;
-    width: min(400px, calc(100vw - 12px));
-    height: auto;
-    min-height: 84px;
+    width: min(350px, calc(100vw - 12px));
+  
+    min-height: 50px;
     display: flex;
     align-items: center;
     gap: 14px;
-    padding: 12px 16px;
+    padding: 1px 1px;
     z-index: 600;
 }
 
@@ -919,9 +919,9 @@ body.pre-log #mute-toggle{
     background: var(--glass);
     backdrop-filter: blur(4px);
     -webkit-backdrop-filter: blur(10px);
-    border: 1px solid var(--cyan);
+    border: 1px solid #3aa3b5;
     color: var(--text);
-    box-shadow: 0 0 40px rgba(102,204,255,0.35), inset 0 0 30px rgba(59,107,209,0.1);
+    box-shadow: 0 0 40px rgba(35, 45, 138, 0.35), inset 0 0 30px rgba(59,107,209,0.1);
 }
 
 .system-window h2{
@@ -1862,7 +1862,7 @@ body.pre-log #mute-toggle{
    §20. AVATAR & SCREEN EFFECTS
    ================================================================ */
 #avatar-frame{
-    width: 52px; height: 52px;
+    width: 52px; height: 40px;
     display: flex; align-items: center; justify-content: center;
     clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
     border: 1px solid rgba(255,255,255,0.25);
