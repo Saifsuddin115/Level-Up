@@ -4,7 +4,7 @@
   "icons": [
     { "src": "levelUp.png", "sizes": "512x512", "type": "image/png" }
   ],
-  "start_url": "..",
+  "start_url": "https://saif.github.io/level-up/index.html",
   "display": "standalone",
   "background_color": "#000000",
   "theme_color": "#000000"
