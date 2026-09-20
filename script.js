@@ -522,6 +522,7 @@ el.streakLightning = document.querySelector('#streak-lightning');
     el.levelupEmblemLetter = document.querySelector('#levelup-emblem-letter');
     el.levelupEyebrow = document.querySelector('#levelup-eyebrow');
     el.levelupContinueBtn = document.querySelector('#levelup-continue-btn');
+    el.logCancelBtn = document.querySelector('#log-cancel');
 
     el.log = document.querySelector('#log'); // the <ul> grid that all skill cards live inside
 
@@ -1056,26 +1057,38 @@ function triggerFlash() {
 function triggerCardLightning() {
     const container = el.cardLightningContainer;
 
-    container.style.setProperty('--card-bolt-duration', CARD_BOLT_DROP_MS + 'ms');
-    container.classList.remove('active', 'pulse');
+    container.style.setProperty(
+        '--card-bolt-duration',
+        CARD_BOLT_DROP_MS + 'ms'
+    );
+
+    container.classList.remove('active');
+
     void container.offsetWidth;
-    container.classList.add('active'); // bolt starts dropping immediately, no extra delay
 
- setTimeout(() => {
-    const scrollY = window.scrollY;
-    document.body.classList.add('pulse'); // if you're using pulse on container elsewhere, keep as-is
-    document.body.classList.remove('card-shake-heavy');
-    void document.body.offsetWidth;
-    document.body.classList.add('card-shake-heavy');
+    container.classList.add('active');
+
     setTimeout(() => {
+        const scrollY = window.scrollY;
+
         document.body.classList.remove('card-shake-heavy');
-        window.scrollTo(0, scrollY);
-    }, 500);
-}, CARD_BOLT_DROP_MS);
+        void document.body.offsetWidth;
+        document.body.classList.add('card-shake-heavy');
 
-    const totalVisibleMs = CARD_BOLT_DROP_MS + CARD_TEXT_DELAY_MS + CARD_TEXT_VISIBLE_MS + CARD_BOLT_EXTRA_MS;
+        setTimeout(() => {
+            document.body.classList.remove('card-shake-heavy');
+            window.scrollTo(0, scrollY);
+        }, 500);
+    }, CARD_BOLT_DROP_MS);
+
+    const totalVisibleMs =
+        CARD_BOLT_DROP_MS +
+        CARD_TEXT_DELAY_MS +
+        CARD_TEXT_VISIBLE_MS +
+        CARD_BOLT_EXTRA_MS;
+
     setTimeout(() => {
-        container.classList.remove('active', 'pulse');
+        container.classList.remove('active');
     }, totalVisibleMs);
 }
 /** Spawns `count` small circular pieces that explode outward from the
@@ -2725,6 +2738,7 @@ function wireEvents() {
     // --- HUD: Undo ----------------------------------------------------------
   el.undoBtn.addEventListener('click', performUndo);
 el.redoBtn.addEventListener('click', performRedo);
+el.logFab.addEventListener('click', () => openLogModal());
 
     // --- HUD: Daily Quest button + modal -------------------------------------
     el.questBtn.addEventListener('click', openQuest);
@@ -2760,6 +2774,7 @@ el.questHoursGroup.style.display = 'block';
         // input to visibly shake like the other modals do, add a
         // flashInputError() call here in the `else` case.
     });
+    el.logCancelBtn.addEventListener('click', closeLogModal);
 
    
     el.logForm.addEventListener('submit', (e) => {
