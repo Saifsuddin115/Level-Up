@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calendar</title>
+    <link rel="stylesheet" href="calendar.css">
+</head>
+<body>
+
+    <div id="hud-right">
+        <div class="page-switcher">
+            <button type="button" id="page-menu-btn" class="hud-btn menu-btn">
+                <span class="hud-icon">☰</span>
+                <span class="hud-label">Menu</span>
+            </button>
+        </div>
+    </div>
+
+    <div id="sidebar-backdrop" class="sidebar-backdrop"></div>
+    <nav id="page-menu" class="page-menu">
+        <button type="button" id="sidebar-close" class="sidebar-close" aria-label="Close menu">✕</button>
+        <a href="index.html">Home</a>
+        <a href="calendar.html" class="active-page">Calendar</a>
+    </nav>
+
+    <div class="calendar-header">
+        <button type="button" id="prev-month-btn" class="month-nav-btn" aria-label="Previous month">‹</button>
+        <h1 id="calendar-title">Loading...</h1>
+        <button type="button" id="next-month-btn" class="month-nav-btn" aria-label="Next month">›</button>
+    </div>
+
+    <div class="calendar" id="calendar-grid"></div>
+
+    <script src="calendar.js"></script>
+</body>
+</html>

@@ -216,6 +216,22 @@
     </div>
   <button type="button" id="undo-btn" class="hud-btn"><span class="hud-icon">↺</span><span class="hud-label">Undo</span></button>
 <button type="button" id="redo-btn" class="hud-btn"><span class="hud-icon">↻</span><span class="hud-label">Redo</span></button>
+
+<div class="page-switcher">
+    <button type="button" id="page-menu-btn" class="hud-btn menu-btn">
+        <span class="hud-icon">☰</span>
+        <span class="hud-label">Menu</span>
+    </button>
+</div>
+
+<div id="sidebar-backdrop" class="sidebar-backdrop"></div>
+<nav id="page-menu" class="page-menu">
+    <button type="button" id="sidebar-close" class="sidebar-close" aria-label="Close menu">✕</button>
+    <a href="index.html" class="active-page">Home</a>
+    <a href="calendar.html">Calendar</a>
+</nav>
+
+</div>
 </div>
 <button type="button" id="mute-toggle" aria-label="Mute sound">🔊</button>
 
@@ -228,14 +244,17 @@
     <span class="quest-label">Daily Quests</span>
 </button>
 
-
-
-  <div id="quest-modal" class="modal-overlay">
+<div id="quest-modal" class="modal-overlay">
 <div id="quest-card" class="notify-window quest-window">
     <div class="quest-header">
         <div class="notify-title-box">DAILY MISSION</div>
     </div>
 
+    <div class="quest-date-nav">
+        <button type="button" id="quest-date-prev" class="quest-date-nav-btn" aria-label="Previous day">‹</button>
+        <span id="quest-date-label">Today</span>
+        <button type="button" id="quest-date-next" class="quest-date-nav-btn" aria-label="Next day">›</button>
+    </div>
 
     <!-- STATE 1: nothing chosen yet -->
     <div id="quest-choice">
@@ -246,17 +265,12 @@
         </div>
     </div>
 
-    <!-- rest of #quest-body / #quest-list stays exactly as it was -->
-
         <!-- STATE 2 & 3: quests exist (manual or auto) -->
         <div id="quest-body" style="display:none;">
             <ul id="quest-list"></ul>
-            
 
             <!-- only shown when mode === 'manual' -->
             <div id="quest-manual-controls" style="display:none;">
-
-
 
     <!-- Step 2 (hidden initially) -->
     <div id="quest-builder" style="display:none;">
@@ -269,7 +283,7 @@
 
      <div class="field-group">
     <label>Quest Type</label>
-    <div class="modal-actions" style="justify-content:flex-start;">
+    <div class="quest-type-row" style="justify-content:flex-start;">
         <button type="button" id="quest-type-timed" class="btn-primary">Timed</button>
         <button type="button" id="quest-type-task" class="btn-ghost">One-Time Task</button>
     </div>
@@ -300,14 +314,13 @@
             </div>
         </div>
 
-        <div class="modal-actions">
-            <button type="button" id="quest-show-builder" class="btn-primary">+ Add Quest</button>
-            <button type="button" id="quest-close-btn" class="btn-ghost">Close</button>
-            <div id="quest-pager" class="quest-pager"></div>
-        </div>
-    </div>
+        <div class="quest-footer-actions">
+    <button type="button" id="quest-show-builder" class="btn-primary">+ Add Quest</button>
+    <button type="button" id="quest-close-btn" class="btn-ghost">Close</button>
+    <div id="quest-pager" class="quest-pager"></div>
 </div>
-
+</div>
+</div>
     <!-- ============ LOG ACTIVITY MODAL ============ -->
     <div id="log-modal" class="modal-overlay">
         <div id="log-card" class="system-window">
@@ -517,6 +530,8 @@
             </div>
         </div>
     </div>
+
+
 
     <script src="script.js"></script>
 </body>

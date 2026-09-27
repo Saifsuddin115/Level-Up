@@ -255,7 +255,7 @@ input:hover{ border-color: var(--line-bright); }
 #hud-right{
     position: fixed;
     top: 16px;
-    right: 10px;      /* pushes the whole group in from the edge — raise this further to shift everything left more */
+    right: 7px;      /* pushes the whole group in from the edge — raise this further to shift everything left more */
     display: flex;
     align-items: center;
     gap: 10px;
@@ -499,6 +499,7 @@ body.pre-log #mute-toggle{
 #log-fab:hover + #fab-label{ opacity: 1; } /* tooltip only shows on hover */
 
 
+
 /* ================================================================
    §7. CHARACTER PROFILE BAR (top-left)
    ================================================================ */
@@ -507,8 +508,7 @@ body.pre-log #mute-toggle{
     top: 8px;
     left: 1px;
     width: min(350px, calc(100vw - 12px));
-  
-    min-height: 50px;
+     min-height: 50px;
     display: flex;
     align-items: center;
     gap: 14px;
@@ -949,9 +949,9 @@ body.pre-log #mute-toggle{
     background: var(--glass);
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(10px);
-    border: 1px solid #3aa3b5;
+    border: 1px solid #7c8090;
     color: var(--text);
-    box-shadow: 0 0 40px rgba(35, 45, 138, 0.35), inset 0 0 30px rgba(59,107,209,0.1);
+    
 }
 
 .system-window h2{
@@ -1001,7 +1001,7 @@ body.pre-log #mute-toggle{
 .modal-overlay.active .scan-line{ animation: scanSweep 0.6s ease-out 0.1s; opacity: 0.9; }
 @keyframes scanSweep{ 0% { top: 0; } 100% { top: 100%; } }
 
-.modal-actions{ display: flex; gap: 10px; justify-content: center; margin-top: 4px; flex-wrap: wrap; }
+.modal-actions{ display: flex; gap: 10px; justify-content: center; margin-top: 4px; flex-wrap: wrap; align-self:center; }
 
 .btn-primary{
     font-family: 'Orbitron', sans-serif;
@@ -1032,7 +1032,6 @@ body.pre-log #mute-toggle{
     border-radius: var(--radius-sm);
     cursor: pointer;
     transition: border-color 0.2s ease, color 0.2s ease, background .2s ease;
-    margin-bottom:10px;
 }
 .btn-ghost:hover{ border-color: var(--line-bright); color: var(--cyan); }
 
@@ -1123,14 +1122,18 @@ body.pre-log #mute-toggle{
 #quest-body{
     display: flex;
     flex-direction: column;
-    flex: 1;        /* grow to fill the leftover space inside .quest-window */
-    min-height: 0;  /* classic flexbox fix — lets #quest-list actually grow/shrink properly */
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;   /* NEW — only this middle area scrolls when the builder grows tall */
 }
 
 .quest-window{
     width: 500px !important;
-    min-height: 700px;
-    padding: 20px 26px 50px !important;
+    max-width: 92vw;
+    height: 620px;        /* <- this is what actually controls the size now — tune it freely */
+    max-height: 90vh;     /* still shrinks it on short laptop screens */
+    overflow-y: auto;     /* fallback scroll, only kicks in on the choice screen if needed */
+    padding: 20px 26px 20px !important;
     text-align: left !important;
     display: flex;
     flex-direction: column;
@@ -1231,13 +1234,14 @@ body.pre-log #mute-toggle{
 
 /* State-choice screen (Manual vs Automatic), shown before any quests exist */
 #quest-choice{ align-self: center; }
+#quest-choice p {margin-bottom:175px;}
 #quest-choice .modal-actions{ flex-direction: column; align-items: center; margin-top: 30px; }
 
 #quest-choose-manual, #quest-choose-auto{
     width: 220px;
-    padding: 12px 20px;
+    padding: 12px 30px;
     background: transparent;
-    border: 1px solid var(--cyan);
+    border: 1px solid #7c8090;  
     color: var(--cyan);
     box-shadow: none;
 }
@@ -2297,11 +2301,10 @@ body.pre-log #mute-toggle{
 #particles.paused .ember{ animation-play-state: paused; }
 @keyframes emberRise{
     0%   { transform: translateY(0) translateX(0); opacity: 0; }
-    10%  { opacity: 0.55; }
-    90%  { opacity: 0.25; }
+    10%  { opacity: 0.85; }
+    90%  { opacity: 0.45; }
     100% { transform: translateY(-110vh) translateX(24px); opacity: 0; }
 }
-
 /* Level-up burst streaks: slow for the first ~40% of the rise, quicker
    through ~65%, then a fast flash to the top for the final stretch —
    each keyframe's animation-timing-function controls the pace into
@@ -2430,15 +2433,12 @@ body.pre-log #mute-toggle{
     padding:1px 1px;
 }
 #quest-add-btn{
-
-
   display: block;
   width: 140px;
   padding: 4px 10px;
   font-size: 12px;
   margin: 7px auto 0;   /* auto left/right = actually centers it */
- 
-  
+
 }
 #quest-hours-group{
     margin-bottom:60px;
@@ -2454,14 +2454,14 @@ body.pre-log #mute-toggle{
 }
 
 .modal-actions{
-    position: relative;   /* add this */
+    position: relative;
     display: flex;
+    align-items: center;
     gap: 10px;
     justify-content: center;
-    margin-top: 4px;
+    margin-top: 200px;
     flex-wrap: wrap;
 }
-
 .quest-pager{
     position: absolute;
     right: 14px;
@@ -2482,4 +2482,141 @@ body.pre-log #mute-toggle{
     display: flex;
     align-items: center;
     justify-content: center;
+}
+/* add this anywhere in styles.css */
+#log-card{
+    width: 460px;
+    max-width: 92vw;
+    padding: 32px 30px 28px;
+}
+#log-form{
+    padding-top: 80px;   /* pushes Activity, Hours, and the buttons down together */
+}
+.quest-type-row{
+    display: flex;
+    gap: 10px;
+    margin-top: 4px;
+}
+
+.quest-footer-actions{
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    justify-content: center;
+    flex: 0 0 auto;      /* fixed size, never grows/shrinks — guarantees it never gets squeezed */
+    padding-top: 16px;
+    flex-wrap: wrap;
+}
+.page-switcher{ position: relative; }
+
+.sidebar-backdrop{
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    backdrop-filter: blur(2px);
+    -webkit-backdrop-filter: blur(2px);
+    z-index: 1500;
+    opacity: 0;
+    transition: opacity 0.25s ease;
+}
+.sidebar-backdrop.open{
+    display: block;
+    opacity: 1;
+}
+
+.page-menu{
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 240px;
+    max-width: 80vw;
+    background: var(--panel-2);
+    border-left: 1px solid var(--line-bright);
+    box-shadow: -10px 0 30px rgba(0,0,0,0.5);
+    z-index: 1600;
+    display: flex;
+    flex-direction: column;
+    padding: 60px 20px 20px;
+    gap: 8px;
+    transform: translateX(100%);
+    transition: transform 0.3s cubic-bezier(.2,.9,.3,1.2);
+}
+.page-menu.open{
+    transform: translateX(0);
+}
+
+.page-menu a{
+    display: block;
+    text-decoration: none;
+    color: var(--text-dim);
+    font-family: 'Orbitron', sans-serif;
+    font-size: 13px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    padding: 12px 14px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    transition: border-color 0.2s ease, color 0.2s ease, background 0.2s ease;
+}
+.page-menu a:hover{
+    border-color: var(--line-bright);
+    color: var(--cyan);
+    background: rgba(255,255,255,0.03);
+}
+.page-menu a.active-page{
+    border-color: var(--cyan);
+    color: var(--cyan);
+    box-shadow: 0 0 10px rgba(102,204,255,0.2);
+}
+
+.sidebar-close{
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    width: 30px;
+    height: 30px;
+    background: transparent;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    color: var(--text-dim);
+    font-size: 13px;
+    cursor: pointer;
+    transition: border-color 0.2s ease, color 0.2s ease;
+}
+.sidebar-close:hover{
+    border-color: var(--danger);
+    color: var(--danger);
+}
+.quest-date-nav{
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    margin-bottom: 18px;
+}
+.quest-date-nav-btn{
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: transparent;
+    border: 1px solid var(--line);
+    color: var(--text-dim);
+    font-size: 15px;
+    line-height: 1;
+    cursor: pointer;
+    transition: border-color 0.2s ease, color 0.2s ease;
+}
+.quest-date-nav-btn:hover{ border-color: var(--line-bright); color: var(--cyan); }
+.quest-date-nav-btn:disabled{ opacity: 0.3; cursor: not-allowed; }
+#quest-date-label{
+    font-family: 'Orbitron', sans-serif;
+    font-size: 12px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--cyan);
+    min-width: 70px;
+    text-align: center;
 }

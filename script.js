@@ -456,6 +456,8 @@ let streak = 0;                 // consecutive-day logging streak
 let today = new Date().toDateString();  // computed ONCE at page load — deliberately not re-computed on every check, so "today" stays stable for the whole session even if it's near midnight
 let dailyQuest = null;          // today's quest state object, loaded/created in loadOrCreateQuest()
 let dailyLog = null;            // today's per-activity hours log, loaded/created in loadOrCreateDailyLog()
+let viewedDate = null;          // date string currently shown in the Daily Quest modal — set in init()
+const YESTERDAY_STR = new Date(Date.now() - 86400000).toDateString(); // computed once, same pattern as `today`
 let editingQuestActivity = null; // which quest (by activity name) is currently in "edit" mode in the quest list, or null if none
 let currentQuestPage = 0;        // which page of the quest list is currently shown (quests are paginated QUEST_PAGE_SIZE at a time)
 let characterName = 'Hunter';    // editable display name shown in the profile bar
@@ -541,6 +543,10 @@ el.streakLightning = document.querySelector('#streak-lightning');
     el.muteBtn      = document.querySelector('#mute-toggle');
     el.undoBtn      = document.querySelector('#undo-btn');
     el.redoBtn = document.querySelector('#redo-btn');
+    el.menuBtn = document.querySelector('#page-menu-btn');
+    el.pageMenu = document.querySelector('#page-menu');
+    el.sidebarBackdrop = document.querySelector('#sidebar-backdrop');
+el.sidebarClose = document.querySelector('#sidebar-close');
 
     el.questModal     = document.querySelector('#quest-modal');
     el.questList       = document.querySelector('#quest-list');
@@ -564,6 +570,9 @@ el.streakLightning = document.querySelector('#streak-lightning');
     el.questManualControls  = document.querySelector('#quest-manual-controls');
     el.questAutoControls    = document.querySelector('#quest-auto-controls');
     el.questCloseBtn   = document.querySelector('#quest-close-btn');
+    el.questDatePrevBtn = document.querySelector('#quest-date-prev');
+    el.questDateNextBtn = document.querySelector('#quest-date-next');
+    el.questDateLabel   = document.querySelector('#quest-date-label');
 
     el.questDeleteModal        = document.querySelector('#quest-delete-modal');
 el.questDeleteConfirmYes   = document.querySelector('#quest-delete-confirm-yes');
@@ -920,17 +929,18 @@ function closeModal(overlay) {
     mechanically repetitive. */
 function initParticles() {
       const colors = ['var(--current-rank-color)','var(--current-rank-color)', 'var(--current-rank-color)'];
-    const count = IS_MOBILE ? 60 : 215;
+    const count = IS_MOBILE ? 40 : 75;
     for (let i = 0; i < count; i++) {
         const p = document.createElement('div');
         p.className = 'ember';
         const c = colors[Math.floor(Math.random() * colors.length)];
-        const size = (1 + Math.random() * 2).toFixed(1);
+        const size = (2.5 + Math.random() * 3.5).toFixed(1);
         p.style.left = (Math.random() * 100).toFixed(1) + '%';
-        p.style.width = size + 'px';   // NOTE: this looks like it should probably be `size + 'px'` — as written it concatenates the size number directly onto the string "400px" (e.g. "1.5400px"), which the browser will treat as an invalid value and ignore, silently falling back to CSS defaults/inheritance for width. Left as-is since it's pre-existing behavior you may be relying on visually, but flagging it in case the ember sizing ever looks "off" and you go looking for why.
-        p.style.height = size + 'px';  // same pattern here
-        p.style.background = c;
-        p.style.boxShadow = `0 0 6px ${c}`;
+        p.style.width = size + 'px';
+        p.style.height = size + 'px';
+        p.style.background = `radial-gradient(circle, #fff 0%, ${c} 75%, ${c} 100%)`;
+        p.style.border = `1px solid ${c}`;
+        p.style.boxShadow = `0 0 10px ${c}, 0 0 14px ${c}, 0 0 40px ${c}`;
         p.style.animationDelay = (Math.random() * 14).toFixed(2) + 's';
         p.style.animationDuration = (10 + Math.random() * 10).toFixed(2) + 's';
         el.particles.appendChild(p);
@@ -1151,6 +1161,7 @@ function spawnConfetti(count, originXPercent, originYPercent) {
         piece.addEventListener('animationend', () => piece.remove(), { once: true });
     }
 }
+
 
 
 /* ================================================================
@@ -1627,7 +1638,7 @@ function logProgress(activityRaw, hoursRaw) {
     Store.setJSON('houred', { starthours, totalHours, level });
 
     dailyLog.hours[activity] = round2((dailyLog.hours[activity] || 0) + hours);
-    Store.setJSON('dailyLog', dailyLog);
+    saveDailyLog(dailyLog);
 
     updateQuestProgress(activity, hours);
     renderQuest();
@@ -1789,8 +1800,8 @@ function applySnapshot(snap) {
 
     Store.setJSON('skills', skills);
     Store.setJSON('houred', { starthours, totalHours, level });
-    Store.setJSON('dailyQuest', dailyQuest);
-    Store.setJSON('dailyLog', dailyLog);
+    saveDailyQuest(dailyQuest);
+    saveDailyLog(dailyLog);
 
     Object.entries(skills).forEach(([name, data]) => refreshCardVisuals(name, data));
 
@@ -1846,19 +1857,19 @@ function closeQuest() {
         return;
     }
     closeModal(el.questModal);
+    if (viewedDate !== today) switchViewedDate(today);
 }
-
 function chooseManualMode() {
     dailyQuest.mode = 'manual';
     dailyQuest.quests = []; // manual mode always starts empty — the user builds their list from scratch
-    Store.setJSON('dailyQuest', dailyQuest);
+saveDailyQuest(dailyQuest);
     renderQuestModal();
 }
 
 function chooseAutoMode() {
     dailyQuest.mode = 'auto';
     dailyQuest.quests = makeQuestList(pickQuestActivities(QUEST_COUNT));
-    Store.setJSON('dailyQuest', dailyQuest);
+saveDailyQuest(dailyQuest);
     renderQuestModal();
 }
 
@@ -1867,7 +1878,7 @@ function chooseAutoMode() {
     discarding whatever quests/progress existed before. */
 function autoGenerateQuests() {
     dailyQuest.quests = makeQuestList(pickQuestActivities(QUEST_COUNT));
-    Store.setJSON('dailyQuest', dailyQuest);
+    saveDailyQuest(dailyQuest);
     renderQuest();
 }
 
@@ -1875,14 +1886,25 @@ function autoGenerateQuests() {
     if none exists yet OR if the saved one is from a previous day
     (the `log.date !== today` check is what makes this "daily" —
     every new calendar day effectively starts a blank log). */
-function loadOrCreateDailyLog() {
-    let log = Store.getJSON('dailyLog', null);
-    if (!log || log.date !== today) {
-        log = { date: today, hours: {} };
-        Store.setJSON('dailyLog', log);
+function loadOrCreateDailyLog(dateStr) {
+    const allLogs = Store.getJSON('logsByDate', {});
+    let log = allLogs[dateStr];
+    if (!log) {
+        log = { date: dateStr, hours: {} };
+        allLogs[dateStr] = log;
+        Store.setJSON('logsByDate', allLogs);
     }
-    if (!log.hours) log.hours = {}; // extra defensive check in case of malformed/old saved data missing this field entirely
+    if (!log.hours) log.hours = {};
     return log;
+}
+
+/** Persists whichever dailyLog object is passed in back into the
+    per-date store, keyed by its own .date field. This is what lets a
+    day's log survive instead of being wiped when the date rolls over. */
+function saveDailyLog(log) {
+    const allLogs = Store.getJSON('logsByDate', {});
+    allLogs[log.date] = log;
+    Store.setJSON('logsByDate', allLogs);
 }
 
 /** Randomly picks up to `n` activity names from the user's existing
@@ -1909,15 +1931,46 @@ function makeQuestList(activities) {
     null, empty quest list, not yet seen) if none exists or the saved
     one is from a previous day — same "daily reset" pattern as
     loadOrCreateDailyLog above. */
-function loadOrCreateQuest() {
-    let quest = Store.getJSON('dailyQuest', null);
-    if (!quest || quest.date !== today) {
-        quest = { date: today, mode: null, quests: [], seen: false };
-        Store.setJSON('dailyQuest', quest);
+function loadOrCreateQuest(dateStr) {
+    const allQuests = Store.getJSON('questsByDate', {});
+    let quest = allQuests[dateStr];
+    if (!quest) {
+        quest = { date: dateStr, mode: null, quests: [], seen: false };
+        allQuests[dateStr] = quest;
+        Store.setJSON('questsByDate', allQuests);
     }
-    if (!Array.isArray(quest.quests)) quest.quests = []; // defensive default for malformed saved data
+    if (!Array.isArray(quest.quests)) quest.quests = [];
     quest.quests.forEach(q => { if (!q.type) q.type = 'timed'; });
     return quest;
+}
+
+function saveDailyQuest(quest) {
+    const allQuests = Store.getJSON('questsByDate', {});
+    allQuests[quest.date] = quest;
+    Store.setJSON('questsByDate', allQuests);
+}
+
+/** Loads the quest + log data for `dateStr` into the module-level
+    dailyQuest/dailyLog variables and re-renders the quest modal to
+    match. Called on initial load (today) and by the prev/next arrows. */
+function switchViewedDate(dateStr) {
+    viewedDate = dateStr;
+    dailyQuest = loadOrCreateQuest(dateStr);
+    dailyLog = loadOrCreateDailyLog(dateStr);
+    dailyQuest.seen = true;
+    saveDailyQuest(dailyQuest);
+    updateQuestDateNav();
+    renderQuestModal();
+}
+
+/** Updates the date label and prev/next button state in the quest
+    modal header. Only two dates are ever navigable — yesterday and
+    today — so this is just a two-way toggle, not open-ended math. */
+function updateQuestDateNav() {
+    if (!el.questDateLabel) return;
+    el.questDateLabel.textContent = viewedDate === today ? 'Today' : 'Yesterday';
+    el.questDatePrevBtn.disabled = viewedDate === YESTERDAY_STR;
+    el.questDateNextBtn.disabled = viewedDate === today;
 }
 
 /** Adds `hoursToAdd` progress to a single quest, capping it at that
@@ -1964,13 +2017,12 @@ function updateQuestProgress(activity, hoursLogged) {
         // BEFORE this quest existed, that earlier progress still counts
         // retroactively instead of being lost.
         applyQuestHours(quest, dailyLog.hours[activity] || hoursLogged);
-        Store.setJSON('dailyQuest', dailyQuest);
+saveDailyQuest(dailyQuest);
         return;
     }
     if (quest.completed) return; // already done, nothing more to apply
     applyQuestHours(quest, hoursLogged);
-    Store.setJSON('dailyQuest', dailyQuest);
-}
+saveDailyQuest(dailyQuest);}
 
 /** Manual-mode "Save Quest" handler — either updates an existing
     quest's goal (if the activity already has a quest) or adds a brand
@@ -1996,7 +2048,7 @@ function addCustomQuest(activity, type, hours) {
             progress: 0, completed: false
         });
     }
-    Store.setJSON('dailyQuest', dailyQuest);
+saveDailyQuest(dailyQuest);
     renderQuest();
     pushUndoSnapshot(preSnap);
     return true;
@@ -2005,7 +2057,7 @@ function toggleTaskQuestComplete(quest) {
     const preSnap = snapshotState();
     quest.completed = !quest.completed;
     if (quest.completed) celebrateQuestComplete();
-    Store.setJSON('dailyQuest', dailyQuest);
+saveDailyQuest(dailyQuest);
     renderQuest();
     pushUndoSnapshot(preSnap);
 }
@@ -2024,7 +2076,7 @@ function saveEditQuest(quest, newActivity, newHours) {
     quest.completed = quest.progress >= quest.goalHours;
 
     editingQuestActivity = null; // exit edit mode
-    Store.setJSON('dailyQuest', dailyQuest);
+saveDailyQuest(dailyQuest);
     renderQuest();
 
     pushUndoSnapshot(preSnap);
@@ -2157,7 +2209,7 @@ function renderQuest() {
             `;
            const actions = document.createElement('div');
 actions.className = 'quest-item-actions';
-if (!q.completed) {
+if (!q.completed && viewedDate === today) {
     const btn = document.createElement('button');
     btn.type = 'button';
     btn.className = 'btn-primary quest-item-log';
@@ -2280,10 +2332,8 @@ function populateQuestActivityChips() {
     HUD button stops pulsing to draw attention until something new
     happens, per the state logic in renderQuest above). */
 function openQuest() {
+    switchViewedDate(today);
     openModal(el.questModal);
-    dailyQuest.seen = true;
-    Store.setJSON('dailyQuest', dailyQuest);
-    renderQuestModal();
 }
 
 
@@ -2296,7 +2346,11 @@ function openQuest() {
     log their first activity of the day, then stops nagging once
     they have. */
 function updateFabPulse() {
-    const hasLoggedToday = dailyLog && Object.keys(dailyLog.hours).length > 0;
+    // deliberately reads TODAY's log directly, not `dailyLog` — dailyLog
+    // may currently point at yesterday while the quest modal is open
+    const allLogs = Store.getJSON('logsByDate', {});
+    const todayLog = allLogs[today];
+    const hasLoggedToday = todayLog && Object.keys(todayLog.hours).length > 0;
     el.logFab.classList.toggle('fab-available', !hasLoggedToday);
 }
 
@@ -3036,10 +3090,11 @@ el.levelupContinueBtn.addEventListener('click', () => {
     // --- Escape key closes whatever's currently open -----------------------------------
     document.addEventListener('keydown', (e) => {
         if (e.key !== 'Escape') return;
-        [el.questModal, el.logModal, el.deleteModal, el.quickaddModal, el.levelupOverlay]
+             [el.questModal, el.logModal, el.deleteModal, el.quickaddModal, el.levelupOverlay]
             .forEach(overlay => {
                 if (overlay.classList.contains('active')) {
-                    if (overlay === el.levelupOverlay) clearTimeout(levelupTimer); // cancel the pending auto-close timer too, since we're closing it manually right now
+                    if (overlay === el.levelupOverlay) clearTimeout(levelupTimer);
+                    if (overlay === el.questModal && viewedDate !== today) switchViewedDate(today);
                     closeModal(overlay);
                 }
             });
@@ -3078,7 +3133,7 @@ el.questTypeTaskBtn.addEventListener('click', () => {
 el.questDeleteConfirmYes.addEventListener('click', () => {
     if (pendingQuestDelete) {
         dailyQuest.quests = dailyQuest.quests.filter(q => q.activity !== pendingQuestDelete);
-        Store.setJSON('dailyQuest', dailyQuest);
+saveDailyQuest(dailyQuest);
         renderQuest();
     }
     pendingQuestDelete = null;
@@ -3088,6 +3143,31 @@ el.questDeleteConfirmNo.addEventListener('click', () => {
     pendingQuestDelete = null;
     closeModal(el.questDeleteModal);
 });
+
+function openSidebar() {
+    el.pageMenu.classList.add('open');
+    el.sidebarBackdrop.classList.add('open');
+}
+function closeSidebar() {
+    el.pageMenu.classList.remove('open');
+    el.sidebarBackdrop.classList.remove('open');
+}
+
+el.menuBtn.addEventListener('click', () => {
+    if (el.pageMenu.classList.contains('open')) closeSidebar();
+    else openSidebar();
+});
+el.sidebarBackdrop.addEventListener('click', closeSidebar);
+el.sidebarClose.addEventListener('click', closeSidebar);
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeSidebar();
+});
+    el.questDatePrevBtn.addEventListener('click', () => {
+        if (viewedDate !== YESTERDAY_STR) switchViewedDate(YESTERDAY_STR);
+    });
+    el.questDateNextBtn.addEventListener('click', () => {
+        if (viewedDate !== today) switchViewedDate(today);
+    });
 }
 
 
@@ -3175,8 +3255,9 @@ el.themeToggle.textContent = lightMode ? '☀️' : '🌙';
     if (el.dailyQuestTimeBtn) el.dailyQuestTimeBtn.dataset.hours = QUEST_HOURS_GOAL; // keeps the Focus Mode "Daily Quest" length preset in sync with QUEST_HOURS_GOAL, in case that constant is ever changed
 
     // --- Load today's quest + log data (creating fresh ones if this is a new day) ---
-    dailyQuest = loadOrCreateQuest();
-    dailyLog = loadOrCreateDailyLog();
+        viewedDate = today;
+    dailyQuest = loadOrCreateQuest(viewedDate);
+    dailyLog = loadOrCreateDailyLog(viewedDate);
     renderQuest();
 
     // Wire up every click/input/keydown listener LAST, once everything
