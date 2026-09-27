@@ -461,6 +461,7 @@ let currentQuestPage = 0;        // which page of the quest list is currently sh
 let characterName = 'Hunter';    // editable display name shown in the profile bar
 let soundMuted = false;          // global mute flag for playChime/playHoverTick
 let pendingDelete = null;        // which skill (by name) the delete-confirmation modal is about to delete, or null
+let pendingQuestDelete = null; // which quest (by activity name) is pending deletion via the quest-delete confirm modal
 let levelupTimer = null;         // handle for the setTimeout that auto-closes the level-up/ARISE overlay, so a new celebration can cancel a still-pending auto-close from a previous one
 
 let quickAddSkill = null;        // which skill the Quick-Add modal is currently targeting
@@ -563,6 +564,10 @@ el.streakLightning = document.querySelector('#streak-lightning');
     el.questManualControls  = document.querySelector('#quest-manual-controls');
     el.questAutoControls    = document.querySelector('#quest-auto-controls');
     el.questCloseBtn   = document.querySelector('#quest-close-btn');
+
+    el.questDeleteModal        = document.querySelector('#quest-delete-modal');
+el.questDeleteConfirmYes   = document.querySelector('#quest-delete-confirm-yes');
+el.questDeleteConfirmNo    = document.querySelector('#quest-delete-confirm-no');
 
     el.logModal        = document.querySelector('#log-modal');
     el.logForm         = document.querySelector('#log-form');
@@ -2025,6 +2030,24 @@ function saveEditQuest(quest, newActivity, newHours) {
     pushUndoSnapshot(preSnap);
 }
 
+/** Opens the quest-delete confirmation modal for a given quest. The
+    actual removal only happens once the user confirms, in wireEvents(). */
+function deleteQuest(activity) {
+    pendingQuestDelete = activity;
+    openModal(el.questDeleteModal);
+}
+
+/** Small shared helper so both quest-row branches in renderQuest()
+    build an identical delete button instead of duplicating markup. */
+function createQuestDeleteBtn(activity) {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'btn-ghost quest-item-delete';
+    btn.textContent = '✕';
+    btn.title = `Delete ${activity}`;
+    btn.addEventListener('click', () => deleteQuest(activity));
+    return btn;
+}
 /** The big quest-list render function — rebuilds the entire #quest-list
     <ul> from scratch every time it's called (rather than trying to
     diff/patch individual rows). Handles three states per row: normal
@@ -2111,12 +2134,13 @@ function renderQuest() {
     doneBtn.textContent = q.completed ? 'Undo' : 'Mark Done';
     doneBtn.addEventListener('click', () => toggleTaskQuestComplete(q));
     actions.appendChild(doneBtn);
-    const editBtn = document.createElement('button');
+      const editBtn = document.createElement('button');
     editBtn.type = 'button';
     editBtn.className = 'btn-ghost quest-item-edit';
     editBtn.textContent = '✎';
     editBtn.addEventListener('click', () => { editingQuestActivity = q.activity; renderQuest(); });
     actions.appendChild(editBtn);
+    actions.appendChild(createQuestDeleteBtn(q.activity));
     li.appendChild(actions);
     el.questList.appendChild(li);
     return;
@@ -2150,6 +2174,7 @@ editBtn.className = 'btn-ghost quest-item-edit';
 editBtn.textContent = '✎';
 editBtn.addEventListener('click', () => { editingQuestActivity = q.activity; renderQuest(); });
 actions.appendChild(editBtn);
+actions.appendChild(createQuestDeleteBtn(q.activity));
 li.appendChild(actions);
 
 if (q._justLogged) {
@@ -2223,13 +2248,14 @@ function renderQuestModal() {
     if (dailyQuest.mode === null) {
         el.questChoice.style.display = 'block';
         el.questBody.style.display = 'none';
+        el.questShowBuilder.style.display = 'none'; // nothing to add yet — mode not chosen
     } else {
         el.questChoice.style.display = 'none';
-        el.questBody.style.display = 'block';
+        el.questBody.style.display = 'flex'; // was 'block' — had to match the new CSS flex layout below
         el.questManualControls.style.display = dailyQuest.mode === 'manual' ? 'block' : 'none';
         el.questAutoControls.style.display   = dailyQuest.mode === 'auto'   ? 'block' : 'none';
         el.questBuilder.style.display = 'none';        // the "add a quest" form always starts collapsed...
-        el.questShowBuilder.style.display = 'block';    // ...with just the "+ Add Quest" trigger button showing
+        el.questShowBuilder.style.display = dailyQuest.mode === 'manual' ? 'block' : 'none'; // only manual mode gets an Add Quest button now that it lives in the bottom row
         renderQuest();
     }
 }
@@ -2822,16 +2848,18 @@ el.questHoursGroup.style.display = 'block';
     });
 
     // --- Delete-skill confirmation modal -----------------------------------
-    el.confirmYes.addEventListener('click', () => {
-        if (pendingDelete && skills[pendingDelete]) {
-            skills[pendingDelete].card.remove();
-            delete skills[pendingDelete];
-            Store.setJSON('skills', skills);
-            persistCardOrder(); // keep the saved card order in sync now that one is gone
-        }
-        pendingDelete = null;
-        closeModal(el.deleteModal);
-    });
+el.confirmYes.addEventListener('click', () => {
+    if (pendingDelete && skills[pendingDelete]) {
+        const preSnap = snapshotState(); // capture state BEFORE the delete, so undo can bring it back
+        skills[pendingDelete].card.remove();
+        delete skills[pendingDelete];
+        Store.setJSON('skills', skills);
+        persistCardOrder(); // keep the saved card order in sync now that one is gone
+        pushUndoSnapshot(preSnap);
+    }
+    pendingDelete = null;
+    closeModal(el.deleteModal);
+});
     el.confirmNo.addEventListener('click', () => {
         pendingDelete = null;
         closeModal(el.deleteModal);
@@ -3046,6 +3074,19 @@ el.questTypeTaskBtn.addEventListener('click', () => {
     el.questTypeTaskBtn.className = 'btn-primary';
     el.questTypeTimedBtn.className = 'btn-ghost';
     el.questHoursGroup.style.display = 'none';
+});
+el.questDeleteConfirmYes.addEventListener('click', () => {
+    if (pendingQuestDelete) {
+        dailyQuest.quests = dailyQuest.quests.filter(q => q.activity !== pendingQuestDelete);
+        Store.setJSON('dailyQuest', dailyQuest);
+        renderQuest();
+    }
+    pendingQuestDelete = null;
+    closeModal(el.questDeleteModal);
+});
+el.questDeleteConfirmNo.addEventListener('click', () => {
+    pendingQuestDelete = null;
+    closeModal(el.questDeleteModal);
 });
 }
 

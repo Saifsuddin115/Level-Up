@@ -233,10 +233,9 @@
   <div id="quest-modal" class="modal-overlay">
 <div id="quest-card" class="notify-window quest-window">
     <div class="quest-header">
-        <div class="notify-title-box">QUEST INFO</div>
+        <div class="notify-title-box">DAILY MISSION</div>
     </div>
 
-    <div class="quest-goal-heading">GOAL</div>
 
     <!-- STATE 1: nothing chosen yet -->
     <div id="quest-choice">
@@ -257,13 +256,7 @@
             <!-- only shown when mode === 'manual' -->
             <div id="quest-manual-controls" style="display:none;">
 
-    <!-- Step 1 -->
-    <button type="button"
-            id="quest-show-builder"
-            class="btn-primary"
-            >
-        + Add Quest
-    </button>
+
 
     <!-- Step 2 (hidden initially) -->
     <div id="quest-builder" style="display:none;">
@@ -293,7 +286,7 @@
         <button type="button"
                 id="quest-add-btn"
                 class="btn-primary"
-                style="width:100%;">
+                >
             Save Quest
         </button>
 
@@ -308,6 +301,7 @@
         </div>
 
         <div class="modal-actions">
+            <button type="button" id="quest-show-builder" class="btn-primary">+ Add Quest</button>
             <button type="button" id="quest-close-btn" class="btn-ghost">Close</button>
             <div id="quest-pager" class="quest-pager"></div>
         </div>
@@ -357,6 +351,17 @@
             <div class="modal-actions">
                 <button type="button" id="confirm-yes" class="btn-ghost btn-danger">Yes</button>
                 <button type="button" id="confirm-no" class="btn-ghost btn-safe">No</button>
+            </div>
+        </div>
+    </div>
+
+      <!-- ============ DELETE QUEST CONFIRM MODAL ============ -->
+    <div id="quest-delete-modal" class="modal-overlay">
+        <div class="modal-card-simple">
+            <p>Delete this quest? Any time already logged toward it will be lost too.</p>
+            <div class="modal-actions">
+                <button type="button" id="quest-delete-confirm-yes" class="btn-ghost btn-danger">Yes, Delete</button>
+                <button type="button" id="quest-delete-confirm-no" class="btn-ghost btn-safe">Cancel</button>
             </div>
         </div>
     </div>
